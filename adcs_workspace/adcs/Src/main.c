@@ -34,7 +34,8 @@
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "adcs_configuration.h"
+#include "adcs_state.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -55,7 +56,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+adcs_state adcs_board_state;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,6 +88,8 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+	/* For Debug */
+	char uart_tmp[20];
 
   /* USER CODE END 1 */
 
@@ -111,13 +114,41 @@ int main(void)
   MX_TIM7_Init();
 
   /* USER CODE BEGIN 2 */
+  /* Kick timer interrupt for timed threads */
+  /*kick_TIM7_timed_interrupt(TIMED_EVENT_PERIOD);*/
+
+  adcs_init_state(&adcs_board_state);
 
   /* USER CODE END 2 */
+  uint8_t i2c_temp[2];
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  adcs_update_state (&adcs_board_state);
+
+	  /* ADT7420*/
+	  /*i2c_temp[0] = 0;
+	  i2c_temp[1] = 0;
+	  HAL_I2C_Mem_Read(&hi2c2, ( 0x48 << 1 ), 0x0B, 1, i2c_temp, 1, 100);
+	  if(i2c_temp[0] == 0xCB)  {
+		  sprintf(uart_tmp, "OK ADT\n");
+		  HAL_UART_Transmit(&huart2, uart_tmp, 7 , 10000);
+	  } else {
+		  sprintf(uart_tmp, "ERROR ADT\n");
+		  HAL_UART_Transmit(&huart2, uart_tmp, 10 , 10000);
+	  }*/
+
+	  HAL_Delay(100);
+	  /* Serial debug */
+	  sprintf(uart_tmp, "Xm:%d \t", adcs_board_state.rm_raw[0]);
+	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+	  sprintf(uart_tmp, "Ym:%d \t", adcs_board_state.rm_raw[1]);
+	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+	  sprintf(uart_tmp, "Zm:%d \n", adcs_board_state.rm_raw[2]);
+	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+	  /****************/
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -209,11 +240,11 @@ void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-  hspi1.Init.CRCPolynomial = 10;
+  hspi1.Init.CRCPolynomial = 7;
   HAL_SPI_Init(&hspi1);
 
 }
