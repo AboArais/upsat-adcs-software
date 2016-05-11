@@ -120,7 +120,7 @@ int main(void)
   adcs_init_state(&adcs_board_state);
 
   /* USER CODE END 2 */
-  uint8_t i2c_temp[2];
+  //uint8_t i2c_temp[2];
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -142,11 +142,11 @@ int main(void)
 
 	  HAL_Delay(100);
 	  /* Serial debug */
-	  sprintf(uart_tmp, "Xm:%d \t", adcs_board_state.rm_raw[0]);
+	  sprintf(uart_tmp, "Xm:%.3f \t", adcs_board_state.rm_mag[0]);
 	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-	  sprintf(uart_tmp, "Ym:%d \t", adcs_board_state.rm_raw[1]);
+	  sprintf(uart_tmp, "Ym:%.3f \t", adcs_board_state.rm_mag[1]);
 	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-	  sprintf(uart_tmp, "Zm:%d \n", adcs_board_state.rm_raw[2]);
+	  sprintf(uart_tmp, "Zm:%.3f \n", adcs_board_state.rm_mag[2]);
 	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
 	  /****************/
   /* USER CODE END WHILE */

@@ -56,27 +56,37 @@ void init_lsm9ds0(volatile adcs_state *state) {
 }
 /* Get ID and set the Cycle Count Registers */
 void init_rm3100(volatile adcs_state *state) {
-	uint8_t spi_in_temp[10];
-	uint8_t spi_out_temp[10];
+	uint8_t spi_in_temp[9];
+	uint8_t spi_out_temp[9];
 	/* Get ID */
 	spi_in_temp[0] = PNI_REVID|STATUS_MASK;
 	spi_in_temp[1] = 0xFF;
 	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
 	HAL_SPI_TransmitReceive(&hspi1, spi_in_temp, spi_out_temp, 2, 1000);
 	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
-	if(spi_out_temp[1] == 0x22)  {
+	if(spi_out_temp[1] != 0x22)  {
 		;//return true;
-	} else {
-		;//return false;
 	}
+	HAL_Delay(10);
+	/* Set Cycle Count Register */
+	spi_in_temp[0] = PNI_CCX;
+	spi_in_temp[1] = PNI_CyclesMSB;
+	spi_in_temp[2] = PNI_CyclesLSB;
+	spi_in_temp[3] = PNI_CyclesMSB;
+	spi_in_temp[4] = PNI_CyclesLSB;
+	spi_in_temp[5] = PNI_CyclesMSB;
+	spi_in_temp[6] = PNI_CyclesLSB;
+	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
+	HAL_SPI_Transmit(&hspi1, spi_in_temp, 7, 1000);
+	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
 	/* LSB/μT */
-	state->rm_gain = 75/1e6;
+	state->rm_gain = RM_GAIN;
 }
 /* Update values for RM3100 */
 void update_rm3100(volatile adcs_state *state) {
 
-	uint8_t spi_in_temp[9];
-	uint8_t spi_out_temp[9];
+	uint8_t spi_in_temp[10];
+	uint8_t spi_out_temp[10];
 	int32_t tmp = 0;
 	char *ptr;
 	/* Write POLL 0x00 register and followed 0x70 */
@@ -97,6 +107,7 @@ void update_rm3100(volatile adcs_state *state) {
 	spi_in_temp[6] = 0x00;
 	spi_in_temp[7] = 0x00;
 	spi_in_temp[8] = 0x00;
+	spi_in_temp[9] = 0x00;
 
 	spi_out_temp[0] = 0x00;
 	spi_out_temp[1] = 0x00;
@@ -107,32 +118,34 @@ void update_rm3100(volatile adcs_state *state) {
 	spi_out_temp[6] = 0x00;
 	spi_out_temp[7] = 0x00;
 	spi_out_temp[8] = 0x00;
+	spi_out_temp[9] = 0x00;
 
 	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
-	HAL_SPI_TransmitReceive(&hspi1, spi_in_temp, spi_out_temp, 9, 1000);
+	HAL_SPI_TransmitReceive(&hspi1, spi_in_temp, spi_out_temp, 10, 1000);
 	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
+
 	/* X Axis */
 	ptr = (char*)(&tmp);
 	ptr = ptr +3;
-	*ptr --= spi_out_temp[0];
 	*ptr --= spi_out_temp[1];
 	*ptr --= spi_out_temp[2];
+	*ptr --= spi_out_temp[3];
 	state->rm_raw[0] = tmp>>8;
 	state->rm_mag[0] = (float)state->rm_raw[0]*state->rm_gain;
 	/* Y Axis */
 	ptr = (char*)(&tmp);
 	ptr = ptr +3;
-	*ptr --= spi_out_temp[3];
 	*ptr --= spi_out_temp[4];
 	*ptr --= spi_out_temp[5];
+	*ptr --= spi_out_temp[6];
 	state->rm_raw[1] = tmp>>8;
 	state->rm_mag[1] = (float)state->rm_raw[1]*state->rm_gain;
 	/* Z Axis */
 	ptr = (char*)(&tmp);
 	ptr = ptr +3;
-	*ptr --= spi_out_temp[6];
 	*ptr --= spi_out_temp[7];
 	*ptr --= spi_out_temp[8];
+	*ptr --= spi_out_temp[9];
 	state->rm_raw[2] = tmp>>8;
 	state->rm_mag[2] = (float)state->rm_raw[2]*state->rm_gain;
 }

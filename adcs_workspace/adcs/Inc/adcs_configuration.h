@@ -42,6 +42,9 @@
 #define PNI_REVID	0x36	/* R		--		Unit8	MagI2C Revision Identification */
 #define SM_ALL_AXIS 0x70    /* Single measurment mode */
 #define STATUS_MASK 0x80    /* To get status of data ready */
+#define PNI_CyclesMSB 0x00
+#define PNI_CyclesLSB 0xC8
+#define RM_GAIN 75/1e6 /* Sensitivity LSB/uT */
 
 /* Set Up PWM Start up Duty-Cycle */
 #define MAGN_STARTUP_PWM_DUTYCYCLE ((uint32_t) 0)
