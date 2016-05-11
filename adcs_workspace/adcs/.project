@@ -26,9 +26,14 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name />
-			<type />
-			<location />
+			<name>adcs</name>
+			<type>2</type>
+			<location>/home/azisi/Documents/UPSat/ecss_services/platform/adcs</location>
+		</link>
+		<link>
+			<name>services</name>
+			<type>2</type>
+			<location>/home/azisi/Documents/UPSat/ecss_services/services</location>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -52,6 +52,7 @@ void BusFault_Handler(void);
 void UsageFault_Handler(void);
 void DebugMon_Handler(void);
 void SysTick_Handler(void);
+void DMA1_Stream6_IRQHandler(void);
 void I2C2_EV_IRQHandler(void);
 void SPI1_IRQHandler(void);
 void USART2_IRQHandler(void);
