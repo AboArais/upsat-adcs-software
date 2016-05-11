@@ -36,6 +36,8 @@
 /* USER CODE BEGIN Includes */
 #include "adcs_configuration.h"
 #include "adcs_state.h"
+#include "adcs.h"
+#include "service_utilities.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -57,6 +59,8 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 adcs_state adcs_board_state;
+
+uint8_t uart_temp[200];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -119,6 +123,17 @@ int main(void)
 
   adcs_init_state(&adcs_board_state);
 
+  HAL_reset_source(&sys_data.rsrc);
+  update_boot_counter();
+  pkt_pool_INIT();
+
+  uint16_t size = 0;
+
+  event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
+  HAL_uart_tx(DBG_APP_ID, (uint8_t *)uart_temp, size);
+
+  HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
+
   /* USER CODE END 2 */
   //uint8_t i2c_temp[2];
 
@@ -126,6 +141,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
 	  adcs_update_state (&adcs_board_state);
 
 	  /* ADT7420*/
@@ -194,7 +210,7 @@ void SystemClock_Config(void)
   HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
   /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+ // HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
 /* I2C2 init function */
