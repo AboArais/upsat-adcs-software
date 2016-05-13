@@ -93,86 +93,95 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 int main(void)
 {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 	/* For Debug */
 	char uart_tmp[20];
+	uint16_t v = 0;
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration----------------------------------------------------------*/
+	/* MCU Configuration----------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_I2C2_Init();
-  MX_SDIO_SD_Init();
-  MX_SPI1_Init();
-  MX_SPI2_Init();
-  MX_TIM3_Init();
-  MX_TIM4_Init();
-  MX_UART4_Init();
-  MX_USART2_UART_Init();
-  MX_TIM7_Init();
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_DMA_Init();
+	MX_I2C2_Init();
+	MX_SDIO_SD_Init();
+	MX_SPI1_Init();
+	MX_SPI2_Init();
+	MX_TIM3_Init();
+	MX_TIM4_Init();
+	MX_UART4_Init();
+	MX_USART2_UART_Init();
+	MX_TIM7_Init();
 
-  /* USER CODE BEGIN 2 */
-  /* Kick timer interrupt for timed threads */
-  /*kick_TIM7_timed_interrupt(TIMED_EVENT_PERIOD);*/
+	/* USER CODE BEGIN 2 */
 
-  adcs_init_state(&adcs_board_state);
+	/* Kick timer interrupt for timed threads */
+	/*kick_TIM7_timed_interrupt(TIMED_EVENT_PERIOD);*/
 
-  HAL_reset_source(&sys_data.rsrc);
-  update_boot_counter();
-  pkt_pool_INIT();
+	adcs_init_state(&adcs_board_state);
 
-  uint16_t size = 0;
+	HAL_reset_source(&sys_data.rsrc);
+	update_boot_counter();
+	pkt_pool_INIT();
+	uint16_t size = 0;
+	event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
+	HAL_uart_tx(DBG_APP_ID, (uint8_t *)uart_temp, size);
+	HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
 
-  event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
-  HAL_uart_tx(DBG_APP_ID, (uint8_t *)uart_temp, size);
+	/* USER CODE END 2 */
 
-  HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1)
+	{
+		import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
 
-  /* USER CODE END 2 */
+		adcs_update_state (&adcs_board_state);
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-	  import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
-	  adcs_update_state (&adcs_board_state);
+		/* Serial debug */
+		sprintf(uart_tmp, "T:%.3f \n", adcs_board_state.temp_c );
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
 
-	  /* ADT7420*/
-	  /*i2c_temp[0] = 0;
-	  i2c_temp[1] = 0;
-	  HAL_I2C_Mem_Read(&hi2c2, ( 0x48 << 1 ), 0x0B, 1, i2c_temp, 1, 100);
-	  if(i2c_temp[0] == 0xCB)  {
-		  sprintf(uart_tmp, "OK ADT\n");
-		  HAL_UART_Transmit(&huart2, uart_tmp, 7 , 10000);
-	  } else {
-		  sprintf(uart_tmp, "ERROR ADT\n");
-		  HAL_UART_Transmit(&huart2, uart_tmp, 10 , 10000);
-	  }*/
+		sprintf(uart_tmp, "Xm:%.3f \t", adcs_board_state.rm_mag[0]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "Ym:%.3f \t", adcs_board_state.rm_mag[1]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "Zm:%.3f \n", adcs_board_state.rm_mag[2]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
 
-	  HAL_Delay(100);
-	  /* Serial debug */
-	  sprintf(uart_tmp, "Xm:%.3f \t", adcs_board_state.rm_mag[0]);
-	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-	  sprintf(uart_tmp, "Ym:%.3f \t", adcs_board_state.rm_mag[1]);
-	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-	  sprintf(uart_tmp, "Zm:%.3f \n", adcs_board_state.rm_mag[2]);
-	  HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-	  /****************/
-  /* USER CODE END WHILE */
+		sprintf(uart_tmp, "Vx:%.3f \t", adcs_board_state.gyr[0]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "Vy:%.3f \t", adcs_board_state.gyr[1]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "Vz:%.3f \n", adcs_board_state.gyr[2]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
 
-  /* USER CODE BEGIN 3 */
+		sprintf(uart_tmp, "V1:%d \t", adcs_board_state.v_sun_raw[0]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "V2:%d \t", adcs_board_state.v_sun_raw[1]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "V3:%d \t", adcs_board_state.v_sun_raw[2]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "V4:%d \t", adcs_board_state.v_sun_raw[3]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "V5:%d \n", adcs_board_state.v_sun_raw[4]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		/****************/
+		HAL_Delay(1000);
+		/* USER CODE END WHILE */
 
-  }
-  /* USER CODE END 3 */
+		/* USER CODE BEGIN 3 */
+
+	}
+	/* USER CODE END 3 */
 
 }
 
