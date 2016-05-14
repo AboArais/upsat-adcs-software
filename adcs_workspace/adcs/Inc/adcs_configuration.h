@@ -56,19 +56,19 @@
 /* ADT7420 default ID */
 #define ADT7420_DEFAULT_ID 0xCB
 /* ADT7420 registers */
-#define ADT7420_REG_TEMP_MSB    0x00 // Temperature value MSB
-#define ADT7420_REG_TEMP_LSB    0x01 // Temperature value LSB
-#define ADT7420_REG_STATUS      0x02 // Status
-#define ADT7420_REG_CONFIG      0x03 // Configuration
-#define ADT7420_REG_T_HIGH_MSB  0x04 // Temperature HIGH setpoint MSB
-#define ADT7420_REG_T_HIGH_LSB  0x05 // Temperature HIGH setpoint LSB
-#define ADT7420_REG_T_LOW_MSB   0x06 // Temperature LOW setpoint MSB
-#define ADT7420_REG_T_LOW_LSB   0x07 // Temperature LOW setpoint LSB
-#define ADT7420_REG_T_CRIT_MSB  0x08 // Temperature CRIT setpoint MSB
-#define ADT7420_REG_T_CRIT_LSB  0x09 // Temperature CRIT setpoint LSB
-#define ADT7420_REG_HIST        0x0A // Temperature HYST setpoint
-#define ADT7420_REG_ID          0x0B // ID
-#define ADT7420_REG_RESET       0x2F // Software reset
+#define ADT7420_REG_TEMP_MSB    0x00 /* Temperature value MSB */
+#define ADT7420_REG_TEMP_LSB    0x01 /* Temperature value LSB */
+#define ADT7420_REG_STATUS      0x02 /* Status */
+#define ADT7420_REG_CONFIG      0x03 /* Configuration */
+#define ADT7420_REG_T_HIGH_MSB  0x04 /* Temperature HIGH setpoint MSB */
+#define ADT7420_REG_T_HIGH_LSB  0x05 /* Temperature HIGH setpoint LSB */
+#define ADT7420_REG_T_LOW_MSB   0x06 /* Temperature LOW setpoint MSB */
+#define ADT7420_REG_T_LOW_LSB   0x07 /* Temperature LOW setpoint LSB */
+#define ADT7420_REG_T_CRIT_MSB  0x08 /* Temperature CRIT setpoint MSB */
+#define ADT7420_REG_T_CRIT_LSB  0x09 /* Temperature CRIT setpoint LSB */
+#define ADT7420_REG_HIST        0x0A /* Temperature HYST setpoint */
+#define ADT7420_REG_ID          0x0B /* ID */
+#define ADT7420_REG_RESET       0x2F /* Software reset */
 /* ADT7420 configure */
 #define ADT7420_16BIT 0x80
 #define ADT7420_OP_MODE_1_SPS 0x40
@@ -86,6 +86,7 @@
 #define AD7682_CH3 0x06 /* Channel 3 */
 #define AD7682_CH2 0x04 /* Channel 2 */
 #define AD7682_CH1 0x02 /* Channel 1 */
+#define AD7682_COEF 0.0000625 /* Convert digital measure to analog */
 
 /* Set Up PWM Start up Duty-Cycle */
 #define MAGN_STARTUP_PWM_DUTYCYCLE ((uint32_t) 0)
@@ -93,6 +94,7 @@
 /* Configure timer */
 extern TIM_HandleTypeDef htim7;
 #define TIMED_EVENT_PERIOD ((uint32_t)50000)
-void kick_TIM7_timed_interrupt(uint32_t control_loop);
+void
+kick_TIM7_timed_interrupt (uint32_t control_loop);
 
 #endif /* INC_ADCS_CONFIGURATION_H_ */

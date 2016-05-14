@@ -96,7 +96,6 @@ int main(void)
 	/* USER CODE BEGIN 1 */
 	/* For Debug */
 	char uart_tmp[20];
-	uint16_t v = 0;
 
 	/* USER CODE END 1 */
 
@@ -164,15 +163,20 @@ int main(void)
 		sprintf(uart_tmp, "Vz:%.3f \n", adcs_board_state.gyr[2]);
 		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
 
-		sprintf(uart_tmp, "V1:%d \t", adcs_board_state.v_sun_raw[0]);
+		sprintf(uart_tmp, "V1:%.3f \t", adcs_board_state.v_sun[0]);
 		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-		sprintf(uart_tmp, "V2:%d \t", adcs_board_state.v_sun_raw[1]);
+		sprintf(uart_tmp, "V2:%.3f \t", adcs_board_state.v_sun[1]);
 		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-		sprintf(uart_tmp, "V3:%d \t", adcs_board_state.v_sun_raw[2]);
+		sprintf(uart_tmp, "V3:%.3f \t", adcs_board_state.v_sun[2]);
 		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-		sprintf(uart_tmp, "V4:%d \t", adcs_board_state.v_sun_raw[3]);
+		sprintf(uart_tmp, "V4:%.3f \t", adcs_board_state.v_sun[3]);
 		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-		sprintf(uart_tmp, "V5:%d \n", adcs_board_state.v_sun_raw[4]);
+		sprintf(uart_tmp, "V5:%.3f \n", adcs_board_state.v_sun[4]);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+
+		sprintf(uart_tmp, "Longitude:%.3f \t", adcs_board_state.long_sun);
+		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+		sprintf(uart_tmp, "Latitude:%.3f \n", adcs_board_state.lat_sun);
 		HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
 		/****************/
 		HAL_Delay(1000);
