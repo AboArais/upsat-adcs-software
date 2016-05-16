@@ -19,31 +19,33 @@
 
 /* ====================================================================== */
 
-#define C1		(1.72027916940703639E-2)
+#define C1	(1.72027916940703639E-2)
 #define C1P2P	(C1 + TWOPI)
 #define THGR70	(1.7321343856509374)
 #define FK5R	(5.07551419432269442E-15)
 
-double gha_aries(double jd)
+double
+gha_aries (double jd)
 {
-/* Method from SGP4SUB.F code. */
-	double ts70, ds70, trfac, theta, days50;
-	long ids70;
+  /* Method from SGP4SUB.F code. */
+  double ts70, ds70, trfac, theta, days50;
+  long ids70;
 
-	days50 = jd - 2400000.5 - 33281.0;
+  days50 = jd - 2400000.5 - 33281.0;
 
-    ts70 = days50 - 7305.0;
-    ids70 = (long)(ts70+1.0e-8);
-    ds70 = ids70;
+  ts70 = days50 - 7305.0;
+  ids70 = (long) (ts70 + 1.0e-8);
+  ds70 = ids70;
 
-    trfac = ts70 - ds70;
+  trfac = ts70 - ds70;
 
-	/* CALCULATE GREENWICH LOCATION AT EPOCH */
-	theta = THGR70 + C1*ds70 + C1P2P*trfac + ts70*ts70*FK5R;
-	theta = fmod(theta, TWOPI);
-    if (theta < 0.0) theta += TWOPI;
+  /* CALCULATE GREENWICH LOCATION AT EPOCH */
+  theta = THGR70 + C1 * ds70 + C1P2P * trfac + ts70 * ts70 * FK5R;
+  theta = fmod (theta, TWOPI);
+  if (theta < 0.0)
+    theta += TWOPI;
 
-return theta;
+  return theta;
 }
 
 /* ===================================================================== */

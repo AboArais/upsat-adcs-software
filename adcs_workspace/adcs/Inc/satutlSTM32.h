@@ -25,16 +25,11 @@ extern "C" {
 #endif
 
 /** satutlSTM32.c **/
-void *vector(size_t num, size_t size);
+void *
+vector (size_t num, size_t size);
 
 /** aries.c **/
-double gha_aries(double jd);
-
-/** ferror.c **/
-void fatal_error(const char *format, ...);
-
-#ifdef __cplusplus
-}
-#endif
+double
+gha_aries (double jd);
 
 #endif /* _SATUTLSTM32_H */

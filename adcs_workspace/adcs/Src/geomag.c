@@ -5,7 +5,6 @@
  *      Author: azisi
  */
 
-
 /****************************************************************************/
 /*                                                                          */
 /****************************************************************************/
@@ -113,11 +112,12 @@
 /****************************************************************************/
 #include "geomag.h"
 
-double PREV_SDATE=0;
+double PREV_SDATE = 0;
 
-int my_isnan(double d)
+int
+my_isnan (double d)
 {
-	return (d != d);              /* IEEE: only NaN is not equal to itself */
+  return (d != d); /* IEEE: only NaN is not equal to itself */
 }
 
 #define GEO_NAN log(-1.0)
@@ -157,12 +157,12 @@ int my_isnan(double d)
 #define MAXCOEFF (MAXDEG*(MAXDEG+2)+1) /* index starts with 1!, (from old Fortran?) */
 double gh1[MAXCOEFF];
 double gh2[MAXCOEFF];
-double gha[MAXCOEFF];              /* Geomag global variables */
+double gha[MAXCOEFF]; /* Geomag global variables */
 double ghb[MAXCOEFF];
-double d=0,f=0,h=0,i=0;
-double dtemp,ftemp,htemp,itemp;
-double x=0,y=0,z=0;
-double xtemp,ytemp,ztemp;
+double d = 0, f = 0, h = 0, i = 0;
+double dtemp, ftemp, htemp, itemp;
+double x = 0, y = 0, z = 0;
+double xtemp, ytemp, ztemp;
 
 /****************************************************************************/
 /*                                                                          */
@@ -273,135 +273,140 @@ double xtemp,ytemp,ztemp;
 /*   yrmin      Double array of MAXMOD  Min year of model.                  */
 /*                                                                          */
 /****************************************************************************/
-int geomag(geomagStruct *gStr)
+int
+geomag (geomagStruct *gStr)
 {
 #ifdef MAC
-	ccommand(argc, argv);
+  ccommand(argc, argv);
 #endif
-	/*  Variable declaration  */
+  /*  Variable declaration  */
 
-	double sdate=gStr->sdate;
-	double latitude=gStr->latitude;
-	double longitude=gStr->longitude;
-	double alt=gStr->alt;
+  double sdate = gStr->sdate;
+  double latitude = gStr->latitude;
+  double longitude = gStr->longitude;
+  double alt = gStr->alt;
 
-	/* Control variables */
-	int   igdgc=2; //GEOCENTRIC
+  /* Control variables */
+  int igdgc = 2; //GEOCENTRIC
 
-	static int max1[MAXMOD];
-	static int max2[MAXMOD];
-	static int max3[MAXMOD];
-	static int nmax;
+  static int max1[MAXMOD];
+  static int max2[MAXMOD];
+  static int max3[MAXMOD];
+  static int nmax;
 
-	char inbuff[MAXINBUFF];
-	int modelI;             /* Which model (Index) */
+  char inbuff[MAXINBUFF];
+  int modelI; /* Which model (Index) */
 
-	//Updated only the first time
-	static char model[MAXMOD][9];
-	static int nmodel;             /* Number of models in file */
+  //Updated only the first time
+  static char model[MAXMOD][9];
+  static int nmodel; /* Number of models in file */
 
-	static double epoch[MAXMOD];
-	static double yrmin[MAXMOD];
-	static double yrmax[MAXMOD];
-	static double minyr;
-	static double maxyr;
-	static double altmin[MAXMOD];
-	static double altmax[MAXMOD];
-	static double minalt;
-	static double maxalt;
+  static double epoch[MAXMOD];
+  static double yrmin[MAXMOD];
+  static double yrmax[MAXMOD];
+  static double minyr;
+  static double maxyr;
+  static double altmin[MAXMOD];
+  static double altmax[MAXMOD];
+  static double minalt;
+  static double maxalt;
 
-	/*  Obtain the desired model file and read the data  */
-	//UPDATE ONLY THE FIRST TIME, store in STATIC var
-	if(PREV_SDATE==0){
-		modelI = 0;
-		model[modelI][9] = 'IGRF2015';
-		epoch[modelI] = 2015.00;
-		max1[modelI] = 13;
-		max2[modelI] = 8;
-		max3[modelI] = 0;
-		yrmin[modelI] = 2015.00;
-		yrmax[modelI] = 2020.00;
-		altmin[modelI] = -1.0;
-		altmax[modelI] = 600.0;
+  /*  Obtain the desired model file and read the data  */
+  //UPDATE ONLY THE FIRST TIME, store in STATIC var
+  if (PREV_SDATE == 0) {
+    modelI = 0;
+    model[modelI][9] = 'IGRF2015';
+    epoch[modelI] = 2015.00;
+    max1[modelI] = 13;
+    max2[modelI] = 8;
+    max3[modelI] = 0;
+    yrmin[modelI] = 2015.00;
+    yrmax[modelI] = 2020.00;
+    altmin[modelI] = -1.0;
+    altmax[modelI] = 600.0;
 
-		minyr=yrmin[0];
-		maxyr=yrmax[0];
+    minyr = yrmin[0];
+    maxyr = yrmax[0];
 
-		nmodel = 0;
-	}
+    nmodel = 0;
+  }
 
-	//UPDATE COEFF ONLY IF SDATE-PREV_SDATE > ~1d??
-	if((sdate-PREV_SDATE)>1/365.0){
-		PREV_SDATE=sdate;
+  //UPDATE COEFF ONLY IF SDATE-PREV_SDATE > ~1d??
+  if ((sdate - PREV_SDATE) > 1 / 365.0) {
+    PREV_SDATE = sdate;
 
-		/* Pick model */
-		for (modelI=0; modelI<nmodel; modelI++)
-			if (sdate<yrmax[modelI]) break;
-		if (modelI == nmodel) modelI--;           /* if beyond end of last model use last model */
+    /* Pick model */
+    for (modelI = 0; modelI < nmodel; modelI++)
+      if (sdate < yrmax[modelI])
+	break;
+    if (modelI == nmodel)
+      modelI--; /* if beyond end of last model use last model */
 
-		/* Get altitude min and max for selected model. */
-		minalt=altmin[modelI];
-		maxalt=altmax[modelI];
+    /* Get altitude min and max for selected model. */
+    minalt = altmin[modelI];
+    maxalt = altmax[modelI];
 
-		/* Get Coordinate prefs */
-		/* If needed modify ranges to reflect coords. */
-		if (igdgc==2)
-		{
-			minalt+=6371.2;  /* Add radius to ranges. */
-			maxalt+=6371.2;
-		}
+    /* Get Coordinate prefs */
+    /* If needed modify ranges to reflect coords. */
+    if (igdgc == 2) {
+      minalt += 6371.2; /* Add radius to ranges. */
+      maxalt += 6371.2;
+    }
 
-		/** This will compute everything needed for 1 point in time. **/
-		if (max2[modelI] == 0)
-		{
-			getshc(1, max1[modelI], 1);
-			getshc(1, max1[modelI+1], 2);
-			nmax = interpsh(sdate, yrmin[modelI], max1[modelI],	yrmin[modelI+1], max1[modelI+1], 3);
-			nmax = interpsh(sdate+1, yrmin[modelI] , max1[modelI],yrmin[modelI+1], max1[modelI+1],4);
-		}
-		else
-		{
-			getshc(1, max1[modelI], 1);
-			getshc(0, max2[modelI], 2);
-			nmax = extrapsh(sdate, epoch[modelI], max1[modelI], max2[modelI], 3);
-			nmax = extrapsh(sdate+1, epoch[modelI], max1[modelI], max2[modelI], 4);
-		}
-	}
+    /** This will compute everything needed for 1 point in time. **/
+    if (max2[modelI] == 0) {
+      getshc (1, max1[modelI], 1);
+      getshc (1, max1[modelI + 1], 2);
+      nmax = interpsh (sdate, yrmin[modelI], max1[modelI], yrmin[modelI + 1],
+		       max1[modelI + 1], 3);
+      nmax = interpsh (sdate + 1, yrmin[modelI], max1[modelI],
+		       yrmin[modelI + 1], max1[modelI + 1], 4);
+    }
+    else {
+      getshc (1, max1[modelI], 1);
+      getshc (0, max2[modelI], 2);
+      nmax = extrapsh (sdate, epoch[modelI], max1[modelI], max2[modelI], 3);
+      nmax = extrapsh (sdate + 1, epoch[modelI], max1[modelI], max2[modelI], 4);
+    }
+  }
 
-	/* Do the first calculations */
-	shval3(igdgc, latitude, longitude, alt, nmax, 3,IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-	dihf(3);
-	shval3(igdgc, latitude, longitude, alt, nmax, 4,IEXT, EXT_COEFF1, EXT_COEFF2, EXT_COEFF3);
-	dihf(4);
+  /* Do the first calculations */
+  shval3 (igdgc, latitude, longitude, alt, nmax, 3, IEXT, EXT_COEFF1,
+	  EXT_COEFF2, EXT_COEFF3);
+  dihf (3);
+  shval3 (igdgc, latitude, longitude, alt, nmax, 4, IEXT, EXT_COEFF1,
+	  EXT_COEFF2, EXT_COEFF3);
+  dihf (4);
 
-	d = d*(RAD2DEG);   i = i*(RAD2DEG);
+  d = d * (RAD2DEG);
+  i = i * (RAD2DEG);
 
-	/* deal with geographic and magnetic poles */
+  /* deal with geographic and magnetic poles */
 
-	if (h < 100.0) /* at magnetic poles */
-	{
-		d = GEO_NAN;
-		/* while rest is ok */
-	}
+  if (h < 100.0) /* at magnetic poles */
+  {
+    d = GEO_NAN;
+    /* while rest is ok */
+  }
 
-	if (90.0-fabs(latitude) <= 0.001) /* at geographic poles */
-	{
-		x = GEO_NAN;
-		y = GEO_NAN;
-		d = GEO_NAN;
-		/* while rest is ok */
-	}
+  if (90.0 - fabs (latitude) <= 0.001) /* at geographic poles */
+  {
+    x = GEO_NAN;
+    y = GEO_NAN;
+    d = GEO_NAN;
+    /* while rest is ok */
+  }
 
-	/** Above will compute everything for 1 point in time.  **/
-	gStr->Xm = x;
-	gStr->Ym = y;
-	gStr->Zm = z;
-	gStr->decl = d;
-	gStr->incl = i;
-	gStr->h = h;
-	gStr->f = f;
+  /** Above will compute everything for 1 point in time.  **/
+  gStr->Xm = x;
+  gStr->Ym = y;
+  gStr->Zm = z;
+  gStr->decl = d;
+  gStr->incl = i;
+  gStr->h = h;
+  gStr->f = f;
 
-	return 0;
+  return 0;
 }
 
 /****************************************************************************/
@@ -426,32 +431,35 @@ int geomag(geomagStruct *gStr)
 /*           August 12, 1988                                                */
 /*                                                                          */
 /****************************************************************************/
-double degrees_to_decimal(int degrees,int minutes,int seconds)
+double
+degrees_to_decimal (int degrees, int minutes, int seconds)
 {
-	double deg;
-	double min;
-	double sec;
-	double decimal;
+  double deg;
+  double min;
+  double sec;
+  double decimal;
 
-	deg = degrees;
-	min = minutes/60.0;
-	sec = seconds/3600.0;
+  deg = degrees;
+  min = minutes / 60.0;
+  sec = seconds / 3600.0;
 
-	decimal = fabs(sec) + fabs(min) + fabs(deg);
+  decimal = fabs (sec) + fabs (min) + fabs (deg);
 
-	if (deg < 0) {
-		decimal = -decimal;
-	} else if (deg == 0){
-		if (min < 0){
-			decimal = -decimal;
-		} else if (min == 0){
-			if (sec<0){
-				decimal = -decimal;
-			}
-		}
-	}
+  if (deg < 0) {
+    decimal = -decimal;
+  }
+  else if (deg == 0) {
+    if (min < 0) {
+      decimal = -decimal;
+    }
+    else if (min == 0) {
+      if (sec < 0) {
+	decimal = -decimal;
+      }
+    }
+  }
 
-	return(decimal);
+  return (decimal);
 }
 
 /****************************************************************************/
@@ -472,21 +480,19 @@ double degrees_to_decimal(int degrees,int minutes,int seconds)
 /*    Version 2.9, http://www.tondering.dk/claus/calendar.html              */
 /*                                                                          */
 /****************************************************************************/
-double julday(month, day, year)
-int month;
-int day;
-int year;
+double julday (month, day, year)
+  int month;int day;int year;
 {
-	int days[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+  int days[12] =
+    { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
 
-	int leap_year = (((year % 4) == 0) &&
-			(((year % 100) != 0) || ((year % 400) == 0)));
+  int leap_year = (((year % 4) == 0)
+      && (((year % 100) != 0) || ((year % 400) == 0)));
 
-	double day_in_year = (days[month - 1] + day + (month > 2 ? leap_year : 0));
+  double day_in_year = (days[month - 1] + day + (month > 2 ? leap_year : 0));
 
-	return ((double)year + (day_in_year / (365.0 + leap_year)));
+  return ((double) year + (day_in_year / (365.0 + leap_year)));
 }
-
 
 /****************************************************************************/
 /*                                                                          */
@@ -519,75 +525,80 @@ int year;
 /*                                                                          */
 /****************************************************************************/
 
-int getshc(int iflag, int nmax_of_gh, int gh){
-	char irat[9];
-	int ii,m,n,mm,nn;
-	int ios;
-	int line_num;
-	double g,hh;
-	double trash;
+int
+getshc (int iflag, int nmax_of_gh, int gh)
+{
+  char irat[9];
+  int ii, m, n, mm, nn;
+  int ios;
+  int line_num;
+  double g, hh;
+  double trash;
 
-	ii = 0;
-	ios = 0;
-	line_num = 0;
+  ii = 0;
+  ios = 0;
+  line_num = 0;
 
-	for ( nn = 1; nn <= nmax_of_gh; ++nn){
-		for (mm = 0; mm <= nn; ++mm){
-			if (iflag == 1){
-				n = nn;
-				m = mm;
-				g = COEFF1[line_num];
-				hh = COEFF2[line_num];
-				trash = COEFF3[line_num];
-				trash = COEFF4[line_num];
-				irat[9] = 'IGRF2015';
-				line_num++;
-			}
-			else{
-				n = nn;
-				m = mm;
-				trash = COEFF1[line_num];
-				trash = COEFF2[line_num];
-				g = COEFF3[line_num];
-				hh = COEFF4[line_num];
-				irat[9] = 'IGRF2015';
-				line_num++;
-			}
-			if ((nn != n) || (mm != m)){
-				ios = -2;
-				return(ios);
-			}
-			ii = ii + 1;
-			switch(gh){
-			case 1:
-				gh1[ii] = g;
-				break;
-			case 2:
-				gh2[ii] = g;
-				break;
-			default:
-				DBUG_GEO("\nError in subroutine getshc");
-				break;
-			}
-			if (m != 0)
-			{
-				ii = ii+ 1;
-				switch(gh){
-				case 1:
-					gh1[ii] = hh;
-					break;
-				case 2:
-					gh2[ii] = hh;
-					break;
-				default:
-					DBUG_GEO("\nError in subroutine getshc");
-					break;
-				}
-			}
-		}
+  for (nn = 1; nn <= nmax_of_gh; ++nn) {
+    for (mm = 0; mm <= nn; ++mm) {
+      if (iflag == 1) {
+	n = nn;
+	m = mm;
+	g = COEFF1[line_num];
+	hh = COEFF2[line_num];
+	trash = COEFF3[line_num];
+	trash = COEFF4[line_num];
+	irat[9] = 'IGRF2015';
+	line_num++;
+      }
+      else {
+	n = nn;
+	m = mm;
+	trash = COEFF1[line_num];
+	trash = COEFF2[line_num];
+	g = COEFF3[line_num];
+	hh = COEFF4[line_num];
+	irat[9] = 'IGRF2015';
+	line_num++;
+      }
+      if ((nn != n) || (mm != m)) {
+	ios = -2;
+	return (ios);
+      }
+      ii = ii + 1;
+      switch (gh)
+	{
+	case 1:
+	  gh1[ii] = g;
+	  break;
+	case 2:
+	  gh2[ii] = g;
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine getshc")
+	  ;
+	  break;
 	}
+      if (m != 0) {
+	ii = ii + 1;
+	switch (gh)
+	  {
+	  case 1:
+	    gh1[ii] = hh;
+	    break;
+	  case 2:
+	    gh2[ii] = hh;
+	    break;
+	  default:
+	    DBUG_GEO("\nError in subroutine getshc")
+	    ;
+	    break;
+	  }
+      }
+    }
+  }
 
-	return(ios);
+  return (ios);
 }
 
 /****************************************************************************/
@@ -624,79 +635,83 @@ int getshc(int iflag, int nmax_of_gh, int gh){
 /*           August 16, 1988                                                */
 /*                                                                          */
 /****************************************************************************/
-int extrapsh(double date,double  dte1, int nmax1, int  nmax2, int gh){
-	int   nmax;
-	int   k, l;
-	int   ii;
-	double factor;
+int
+extrapsh (double date, double dte1, int nmax1, int nmax2, int gh)
+{
+  int nmax;
+  int k, l;
+  int ii;
+  double factor;
 
-	factor = date - dte1;
-	if (nmax1 == nmax2)
+  factor = date - dte1;
+  if (nmax1 == nmax2) {
+    k = nmax1 * (nmax1 + 2);
+    nmax = nmax1;
+  }
+  else {
+    if (nmax1 > nmax2) {
+      k = nmax2 * (nmax2 + 2);
+      l = nmax1 * (nmax1 + 2);
+      switch (gh)
 	{
-		k =  nmax1 * (nmax1 + 2);
-		nmax = nmax1;
+	case 3:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    gha[ii] = gh1[ii];
+	  }
+	  break;
+	case 4:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    ghb[ii] = gh1[ii];
+	  }
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine extrapsh")
+	  ;
+	  break;
 	}
-	else
+      nmax = nmax1;
+    }
+    else {
+      k = nmax1 * (nmax1 + 2);
+      l = nmax2 * (nmax2 + 2);
+      switch (gh)
 	{
-		if (nmax1 > nmax2)
-		{
-			k = nmax2 * (nmax2 + 2);
-			l = nmax1 * (nmax1 + 2);
-			switch(gh)
-			{
-			case 3:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				gha[ii] = gh1[ii];
-			}
-			break;
-			case 4:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				ghb[ii] = gh1[ii];
-			}
-			break;
-			default: DBUG_GEO("\nError in subroutine extrapsh");
-			break;
-			}
-			nmax = nmax1;
-		}
-		else
-		{
-			k = nmax1 * (nmax1 + 2);
-			l = nmax2 * (nmax2 + 2);
-			switch(gh)
-			{
-			case 3:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				gha[ii] = factor * gh2[ii];
-			}
-			break;
-			case 4:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				ghb[ii] = factor * gh2[ii];
-			}
-			break;
-			default: DBUG_GEO("\nError in subroutine extrapsh");
-			break;
-			}
-			nmax = nmax2;
-		}
+	case 3:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    gha[ii] = factor * gh2[ii];
+	  }
+	  break;
+	case 4:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    ghb[ii] = factor * gh2[ii];
+	  }
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine extrapsh")
+	  ;
+	  break;
 	}
-	switch(gh)
-	{
-	case 3:  for ( ii = 1; ii <= k; ++ii)
-	{
-		gha[ii] = gh1[ii] + factor * gh2[ii];
-	}
-	break;
-	case 4:  for ( ii = 1; ii <= k; ++ii)
-	{
-		ghb[ii] = gh1[ii] + factor * gh2[ii];
-	}
-	break;
-	default: DBUG_GEO("\nError in subroutine extrapsh");
-	break;
-	}
-	return(nmax);
+      nmax = nmax2;
+    }
+  }
+  switch (gh)
+    {
+    case 3:
+      for (ii = 1; ii <= k; ++ii) {
+	gha[ii] = gh1[ii] + factor * gh2[ii];
+      }
+      break;
+    case 4:
+      for (ii = 1; ii <= k; ++ii) {
+	ghb[ii] = gh1[ii] + factor * gh2[ii];
+      }
+      break;
+    default:
+      DBUG_GEO("\nError in subroutine extrapsh")
+      ;
+      break;
+    }
+  return (nmax);
 }
 
 /****************************************************************************/
@@ -733,79 +748,83 @@ int extrapsh(double date,double  dte1, int nmax1, int  nmax2, int gh){
 /*           August 17, 1988                                                */
 /*                                                                          */
 /****************************************************************************/
-int interpsh(double date,double dte1, int nmax1,double  dte2,int  nmax2,int gh){
-	int   nmax;
-	int   k, l;
-	int   ii;
-	double factor;
+int
+interpsh (double date, double dte1, int nmax1, double dte2, int nmax2, int gh)
+{
+  int nmax;
+  int k, l;
+  int ii;
+  double factor;
 
-	factor = (date - dte1) / (dte2 - dte1);
-	if (nmax1 == nmax2)
+  factor = (date - dte1) / (dte2 - dte1);
+  if (nmax1 == nmax2) {
+    k = nmax1 * (nmax1 + 2);
+    nmax = nmax1;
+  }
+  else {
+    if (nmax1 > nmax2) {
+      k = nmax2 * (nmax2 + 2);
+      l = nmax1 * (nmax1 + 2);
+      switch (gh)
 	{
-		k =  nmax1 * (nmax1 + 2);
-		nmax = nmax1;
+	case 3:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    gha[ii] = gh1[ii] + factor * (-gh1[ii]);
+	  }
+	  break;
+	case 4:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    ghb[ii] = gh1[ii] + factor * (-gh1[ii]);
+	  }
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine extrapsh")
+	  ;
+	  break;
 	}
-	else
+      nmax = nmax1;
+    }
+    else {
+      k = nmax1 * (nmax1 + 2);
+      l = nmax2 * (nmax2 + 2);
+      switch (gh)
 	{
-		if (nmax1 > nmax2)
-		{
-			k = nmax2 * (nmax2 + 2);
-			l = nmax1 * (nmax1 + 2);
-			switch(gh)
-			{
-			case 3:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				gha[ii] = gh1[ii] + factor * (-gh1[ii]);
-			}
-			break;
-			case 4:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				ghb[ii] = gh1[ii] + factor * (-gh1[ii]);
-			}
-			break;
-			default: DBUG_GEO("\nError in subroutine extrapsh");
-			break;
-			}
-			nmax = nmax1;
-		}
-		else
-		{
-			k = nmax1 * (nmax1 + 2);
-			l = nmax2 * (nmax2 + 2);
-			switch(gh)
-			{
-			case 3:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				gha[ii] = factor * gh2[ii];
-			}
-			break;
-			case 4:  for ( ii = k + 1; ii <= l; ++ii)
-			{
-				ghb[ii] = factor * gh2[ii];
-			}
-			break;
-			default: DBUG_GEO("\nError in subroutine extrapsh");
-			break;
-			}
-			nmax = nmax2;
-		}
+	case 3:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    gha[ii] = factor * gh2[ii];
+	  }
+	  break;
+	case 4:
+	  for (ii = k + 1; ii <= l; ++ii) {
+	    ghb[ii] = factor * gh2[ii];
+	  }
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine extrapsh")
+	  ;
+	  break;
 	}
-	switch(gh)
-	{
-	case 3:  for ( ii = 1; ii <= k; ++ii)
-	{
-		gha[ii] = gh1[ii] + factor * (gh2[ii] - gh1[ii]);
-	}
-	break;
-	case 4:  for ( ii = 1; ii <= k; ++ii)
-	{
-		ghb[ii] = gh1[ii] + factor * (gh2[ii] - gh1[ii]);
-	}
-	break;
-	default: DBUG_GEO("\nError in subroutine extrapsh");
-	break;
-	}
-	return(nmax);
+      nmax = nmax2;
+    }
+  }
+  switch (gh)
+    {
+    case 3:
+      for (ii = 1; ii <= k; ++ii) {
+	gha[ii] = gh1[ii] + factor * (gh2[ii] - gh1[ii]);
+      }
+      break;
+    case 4:
+      for (ii = 1; ii <= k; ++ii) {
+	ghb[ii] = gh1[ii] + factor * (gh2[ii] - gh1[ii]);
+      }
+      break;
+    default:
+      DBUG_GEO("\nError in subroutine extrapsh")
+      ;
+      break;
+    }
+  return (nmax);
 }
 
 /****************************************************************************/
@@ -851,234 +870,241 @@ int interpsh(double date,double dte1, int nmax1,double  dte2,int  nmax2,int gh){
 /*           August 17, 1988                                                */
 /*                                                                          */
 /****************************************************************************/
-int shval3(int igdgc,double flat,double flon,double elev,int nmax,int gh,int iext,double ext1,double ext2,double ext3)
+int
+shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
+	int iext, double ext1, double ext2, double ext3)
 {
-	double earths_radius = 6371.2;
-	double dtr = 0.01745329;
-	double slat;
-	double clat;
-	double ratio;
-	double aa, bb, cc, dd;
-	double sd;
-	double cd;
-	double r;
-	double a2;
-	double b2;
-	double rr;
-	double fm,fn;
-	double sl[14];
-	double cl[14];
-	double p[119];
-	double q[119];
-	int ii,j,k,l,m,n;
-	int npq;
-	int ios;
-	double argument;
-	double power;
-	a2 = 40680631.59;            /* WGS84 */
-	b2 = 40408299.98;            /* WGS84 */
-	ios = 0;
-	r = elev;
-	argument = flat * dtr;
-	slat = sin( argument );
-	if ((90.0 - flat) < 0.001)
-	{
-		aa = 89.999;            /*  300 ft. from North pole  */
-	}
-	else
-	{
-		if ((90.0 + flat) < 0.001)
-		{
-			aa = -89.999;        /*  300 ft. from South pole  */
-		}
-		else
-		{
-			aa = flat;
-		}
-	}
-	argument = aa * dtr;
-	clat = cos( argument );
-	argument = flon * dtr;
-	sl[1] = sin( argument );
-	cl[1] = cos( argument );
-	switch(gh)
-	{
-	case 3:  x = 0;
-	y = 0;
-	z = 0;
+  double earths_radius = 6371.2;
+  double dtr = 0.01745329;
+  double slat;
+  double clat;
+  double ratio;
+  double aa, bb, cc, dd;
+  double sd;
+  double cd;
+  double r;
+  double a2;
+  double b2;
+  double rr;
+  double fm, fn;
+  double sl[14];
+  double cl[14];
+  double p[119];
+  double q[119];
+  int ii, j, k, l, m, n;
+  int npq;
+  int ios;
+  double argument;
+  double power;
+  a2 = 40680631.59; /* WGS84 */
+  b2 = 40408299.98; /* WGS84 */
+  ios = 0;
+  r = elev;
+  argument = flat * dtr;
+  slat = sin (argument);
+  if ((90.0 - flat) < 0.001) {
+    aa = 89.999; /*  300 ft. from North pole  */
+  }
+  else {
+    if ((90.0 + flat) < 0.001) {
+      aa = -89.999; /*  300 ft. from South pole  */
+    }
+    else {
+      aa = flat;
+    }
+  }
+  argument = aa * dtr;
+  clat = cos (argument);
+  argument = flon * dtr;
+  sl[1] = sin (argument);
+  cl[1] = cos (argument);
+  switch (gh)
+    {
+    case 3:
+      x = 0;
+      y = 0;
+      z = 0;
+      break;
+    case 4:
+      xtemp = 0;
+      ytemp = 0;
+      ztemp = 0;
+      break;
+    default:
+      DBUG_GEO("\nError in subroutine shval3")
+      ;
+      break;
+    }
+  sd = 0.0;
+  cd = 1.0;
+  l = 1;
+  n = 0;
+  m = 1;
+  npq = (nmax * (nmax + 3)) / 2;
+  if (igdgc == 1) {
+    aa = a2 * clat * clat;
+    bb = b2 * slat * slat;
+    cc = aa + bb;
+    argument = cc;
+    dd = sqrt (argument);
+    argument = elev * (elev + 2.0 * dd) + (a2 * aa + b2 * bb) / cc;
+    r = sqrt (argument);
+    cd = (elev + dd) / r;
+    sd = (a2 - b2) / dd * slat * clat / r;
+    aa = slat;
+    slat = slat * cd - clat * sd;
+    clat = clat * cd + aa * sd;
+  }
+  ratio = earths_radius / r;
+  argument = 3.0;
+  aa = sqrt (argument);
+  p[1] = 2.0 * slat;
+  p[2] = 2.0 * clat;
+  p[3] = 4.5 * slat * slat - 1.5;
+  p[4] = 3.0 * aa * clat * slat;
+  q[1] = -clat;
+  q[2] = slat;
+  q[3] = -3.0 * clat * slat;
+  q[4] = aa * (slat * slat - clat * clat);
+  for (k = 1; k <= npq; ++k) {
+    if (n < m) {
+      m = 0;
+      n = n + 1;
+      argument = ratio;
+      power = n + 2;
+      rr = pow (argument, power);
+      fn = n;
+    }
+    fm = m;
+    if (k >= 5) {
+      if (m == n) {
+	argument = (1.0 - 0.5 / fm);
+	aa = sqrt (argument);
+	j = k - n - 1;
+	p[k] = (1.0 + 1.0 / fm) * aa * clat * p[j];
+	q[k] = aa * (clat * q[j] + slat / fm * p[j]);
+	sl[m] = sl[m - 1] * cl[1] + cl[m - 1] * sl[1];
+	cl[m] = cl[m - 1] * cl[1] - sl[m - 1] * sl[1];
+      }
+      else {
+	argument = fn * fn - fm * fm;
+	aa = sqrt (argument);
+	argument = ((fn - 1.0) * (fn - 1.0)) - (fm * fm);
+	bb = sqrt (argument) / aa;
+	cc = (2.0 * fn - 1.0) / aa;
+	ii = k - n;
+	j = k - 2 * n + 1;
+	p[k] = (fn + 1.0) * (cc * slat / fn * p[ii] - bb / (fn - 1.0) * p[j]);
+	q[k] = cc * (slat * q[ii] - clat / fn * p[ii]) - bb * q[j];
+      }
+    }
+    switch (gh)
+      {
+      case 3:
+	aa = rr * gha[l];
 	break;
-	case 4:  xtemp = 0;
-	ytemp = 0;
-	ztemp = 0;
+      case 4:
+	aa = rr * ghb[l];
 	break;
-	default: DBUG_GEO("\nError in subroutine shval3");
+      default:
+	DBUG_GEO("\nError in subroutine shval3")
+	;
 	break;
-	}
-	sd = 0.0;
-	cd = 1.0;
-	l = 1;
-	n = 0;
-	m = 1;
-	npq = (nmax * (nmax + 3)) / 2;
-	if (igdgc == 1)
+      }
+    if (m == 0) {
+      switch (gh)
 	{
-		aa = a2 * clat * clat;
-		bb = b2 * slat * slat;
-		cc = aa + bb;
-		argument = cc;
-		dd = sqrt( argument );
-		argument = elev * (elev + 2.0 * dd) + (a2 * aa + b2 * bb) / cc;
-		r = sqrt( argument );
-		cd = (elev + dd) / r;
-		sd = (a2 - b2) / dd * slat * clat / r;
-		aa = slat;
-		slat = slat * cd - clat * sd;
-		clat = clat * cd + aa * sd;
+	case 3:
+	  x = x + aa * q[k];
+	  z = z - aa * p[k];
+	  break;
+	case 4:
+	  xtemp = xtemp + aa * q[k];
+	  ztemp = ztemp - aa * p[k];
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine shval3")
+	  ;
+	  break;
 	}
-	ratio = earths_radius / r;
-	argument = 3.0;
-	aa = sqrt( argument );
-	p[1] = 2.0 * slat;
-	p[2] = 2.0 * clat;
-	p[3] = 4.5 * slat * slat - 1.5;
-	p[4] = 3.0 * aa * clat * slat;
-	q[1] = -clat;
-	q[2] = slat;
-	q[3] = -3.0 * clat * slat;
-	q[4] = aa * (slat * slat - clat * clat);
-	for ( k = 1; k <= npq; ++k)
+      l = l + 1;
+    }
+    else {
+      switch (gh)
 	{
-		if (n < m)
-		{
-			m = 0;
-			n = n + 1;
-			argument = ratio;
-			power =  n + 2;
-			rr = pow(argument,power);
-			fn = n;
-		}
-		fm = m;
-		if (k >= 5)
-		{
-			if (m == n)
-			{
-				argument = (1.0 - 0.5/fm);
-				aa = sqrt( argument );
-				j = k - n - 1;
-				p[k] = (1.0 + 1.0/fm) * aa * clat * p[j];
-				q[k] = aa * (clat * q[j] + slat/fm * p[j]);
-				sl[m] = sl[m-1] * cl[1] + cl[m-1] * sl[1];
-				cl[m] = cl[m-1] * cl[1] - sl[m-1] * sl[1];
-			}
-			else
-			{
-				argument = fn*fn - fm*fm;
-				aa = sqrt( argument );
-				argument = ((fn - 1.0)*(fn-1.0)) - (fm * fm);
-				bb = sqrt( argument )/aa;
-				cc = (2.0 * fn - 1.0)/aa;
-				ii = k - n;
-				j = k - 2 * n + 1;
-				p[k] = (fn + 1.0) * (cc * slat/fn * p[ii] - bb/(fn - 1.0) * p[j]);
-				q[k] = cc * (slat * q[ii] - clat/fn * p[ii]) - bb * q[j];
-			}
-		}
-		switch(gh)
-		{
-		case 3:  aa = rr * gha[l];
-		break;
-		case 4:  aa = rr * ghb[l];
-		break;
-		default: DBUG_GEO("\nError in subroutine shval3");
-		break;
-		}
-		if (m == 0)
-		{
-			switch(gh)
-			{
-			case 3:  x = x + aa * q[k];
-			z = z - aa * p[k];
-			break;
-			case 4:  xtemp = xtemp + aa * q[k];
-			ztemp = ztemp - aa * p[k];
-			break;
-			default: DBUG_GEO("\nError in subroutine shval3");
-			break;
-			}
-			l = l + 1;
-		}
-		else
-		{
-			switch(gh)
-			{
-			case 3:  bb = rr * gha[l+1];
-			cc = aa * cl[m] + bb * sl[m];
-			x = x + cc * q[k];
-			z = z - cc * p[k];
-			if (clat > 0)
-			{
-				y = y + (aa * sl[m] - bb * cl[m]) *
-						fm * p[k]/((fn + 1.0) * clat);
-			}
-			else
-			{
-				y = y + (aa * sl[m] - bb * cl[m]) * q[k] * slat;
-			}
-			l = l + 2;
-			break;
-			case 4:  bb = rr * ghb[l+1];
-			cc = aa * cl[m] + bb * sl[m];
-			xtemp = xtemp + cc * q[k];
-			ztemp = ztemp - cc * p[k];
-			if (clat > 0)
-			{
-				ytemp = ytemp + (aa * sl[m] - bb * cl[m]) *
-						fm * p[k]/((fn + 1.0) * clat);
-			}
-			else
-			{
-				ytemp = ytemp + (aa * sl[m] - bb * cl[m]) *
-						q[k] * slat;
-			}
-			l = l + 2;
-			break;
-			default: DBUG_GEO("\nError in subroutine shval3");
-			break;
-			}
-		}
-		m = m + 1;
+	case 3:
+	  bb = rr * gha[l + 1];
+	  cc = aa * cl[m] + bb * sl[m];
+	  x = x + cc * q[k];
+	  z = z - cc * p[k];
+	  if (clat > 0) {
+	    y = y + (aa * sl[m] - bb * cl[m]) * fm * p[k] / ((fn + 1.0) * clat);
+	  }
+	  else {
+	    y = y + (aa * sl[m] - bb * cl[m]) * q[k] * slat;
+	  }
+	  l = l + 2;
+	  break;
+	case 4:
+	  bb = rr * ghb[l + 1];
+	  cc = aa * cl[m] + bb * sl[m];
+	  xtemp = xtemp + cc * q[k];
+	  ztemp = ztemp - cc * p[k];
+	  if (clat > 0) {
+	    ytemp = ytemp
+		+ (aa * sl[m] - bb * cl[m]) * fm * p[k] / ((fn + 1.0) * clat);
+	  }
+	  else {
+	    ytemp = ytemp + (aa * sl[m] - bb * cl[m]) * q[k] * slat;
+	  }
+	  l = l + 2;
+	  break;
+	default:
+	  DBUG_GEO("\nError in subroutine shval3")
+	  ;
+	  break;
 	}
-	if (iext != 0)
-	{
-		aa = ext2 * cl[1] + ext3 * sl[1];
-		switch(gh)
-		{
-		case 3:   x = x - ext1 * clat + aa * slat;
-		y = y + ext2 * sl[1] - ext3 * cl[1];
-		z = z + ext1 * slat + aa * clat;
-		break;
-		case 4:   xtemp = xtemp - ext1 * clat + aa * slat;
-		ytemp = ytemp + ext2 * sl[1] - ext3 * cl[1];
-		ztemp = ztemp + ext1 * slat + aa * clat;
-		break;
-		default:  DBUG_GEO("\nError in subroutine shval3");
-		break;
-		}
-	}
-	switch(gh)
-	{
-	case 3:   aa = x;
-	x = x * cd + z * sd;
-	z = z * cd - aa * sd;
+    }
+    m = m + 1;
+  }
+  if (iext != 0) {
+    aa = ext2 * cl[1] + ext3 * sl[1];
+    switch (gh)
+      {
+      case 3:
+	x = x - ext1 * clat + aa * slat;
+	y = y + ext2 * sl[1] - ext3 * cl[1];
+	z = z + ext1 * slat + aa * clat;
 	break;
-	case 4:   aa = xtemp;
-	xtemp = xtemp * cd + ztemp * sd;
-	ztemp = ztemp * cd - aa * sd;
+      case 4:
+	xtemp = xtemp - ext1 * clat + aa * slat;
+	ytemp = ytemp + ext2 * sl[1] - ext3 * cl[1];
+	ztemp = ztemp + ext1 * slat + aa * clat;
 	break;
-	default:  DBUG_GEO("\nError in subroutine shval3");
+      default:
+	DBUG_GEO("\nError in subroutine shval3")
+	;
 	break;
-	}
-	return(ios);
+      }
+  }
+  switch (gh)
+    {
+    case 3:
+      aa = x;
+      x = x * cd + z * sd;
+      z = z * cd - aa * sd;
+      break;
+    case 4:
+      aa = xtemp;
+      xtemp = xtemp * cd + ztemp * sd;
+      ztemp = ztemp * cd - aa * sd;
+      break;
+    default:
+      DBUG_GEO("\nError in subroutine shval3")
+      ;
+      break;
+    }
+  return (ios);
 }
 
 /****************************************************************************/
@@ -1110,157 +1136,159 @@ int shval3(int igdgc,double flat,double flon,double elev,int nmax,int gh,int iex
 /*           August 22, 1988                                                */
 /*                                                                          */
 /****************************************************************************/
-int dihf (int gh){
-	int ios;
-	int j;
-	double sn;
-	double h2;
-	double hpx;
-	double argument, argument2;
+int
+dihf (int gh)
+{
+  int ios;
+  int j;
+  double sn;
+  double h2;
+  double hpx;
+  double argument, argument2;
 
-	ios = gh;
-	sn = 0.0001;
+  ios = gh;
+  sn = 0.0001;
 
-	switch(gh)
-	{
-	case 3:   for (j = 1; j <= 1; ++j)
-	{
-		h2 = x*x + y*y;
-		argument = h2;
-		h = sqrt(argument);       /* calculate horizontal intensity */
-		argument = h2 + z*z;
-		f = sqrt(argument);      /* calculate total intensity */
-		if (f < sn)
-		{
-			d = GEO_NAN;        /* If d and i cannot be determined, */
-			i = GEO_NAN;        /*       set equal to GEO_NAN         */
-		}
-		else
-		{
-			argument = z;
-			argument2 = h;
-			i = atan2(argument,argument2);
-			if (h < sn)
-			{
-				d = GEO_NAN;
-			}
-			else
-			{
-				hpx = h + x;
-				if (hpx < sn)
-				{
-					d = PI;
-				}
-				else
-				{
-					argument = y;
-					argument2 = hpx;
-					d = 2.0 * atan2(argument,argument2);
-				}
-			}
-		}
+  switch (gh)
+    {
+    case 3:
+      for (j = 1; j <= 1; ++j) {
+	h2 = x * x + y * y;
+	argument = h2;
+	h = sqrt (argument); /* calculate horizontal intensity */
+	argument = h2 + z * z;
+	f = sqrt (argument); /* calculate total intensity */
+	if (f < sn) {
+	  d = GEO_NAN; /* If d and i cannot be determined, */
+	  i = GEO_NAN; /*       set equal to GEO_NAN         */
 	}
-	break;
-	case 4:   for (j = 1; j <= 1; ++j)
-	{
-		h2 = xtemp*xtemp + ytemp*ytemp;
-		argument = h2;
-		htemp = sqrt(argument);
-		argument = h2 + ztemp*ztemp;
-		ftemp = sqrt(argument);
-		if (ftemp < sn)
-		{
-			dtemp = GEO_NAN;    /* If d and i cannot be determined, */
-			itemp = GEO_NAN;    /*       set equal to 999.0         */
-		}
-		else
-		{
-			argument = ztemp;
-			argument2 = htemp;
-			itemp = atan2(argument,argument2);
-			if (htemp < sn)
-			{
-				dtemp = GEO_NAN;
-			}
-			else
-			{
-				hpx = htemp + xtemp;
-				if (hpx < sn)
-				{
-					dtemp = PI;
-				}
-				else
-				{
-					argument = ytemp;
-					argument2 = hpx;
-					dtemp = 2.0 * atan2(argument,argument2);
-				}
-			}
-		}
+	else {
+	  argument = z;
+	  argument2 = h;
+	  i = atan2 (argument, argument2);
+	  if (h < sn) {
+	    d = GEO_NAN;
+	  }
+	  else {
+	    hpx = h + x;
+	    if (hpx < sn) {
+	      d = PI;
+	    }
+	    else {
+	      argument = y;
+	      argument2 = hpx;
+	      d = 2.0 * atan2 (argument, argument2);
+	    }
+	  }
 	}
-	break;
-	default:  //printf("\nError in subroutine dihf");
-	break;
+      }
+      break;
+    case 4:
+      for (j = 1; j <= 1; ++j) {
+	h2 = xtemp * xtemp + ytemp * ytemp;
+	argument = h2;
+	htemp = sqrt (argument);
+	argument = h2 + ztemp * ztemp;
+	ftemp = sqrt (argument);
+	if (ftemp < sn) {
+	  dtemp = GEO_NAN; /* If d and i cannot be determined, */
+	  itemp = GEO_NAN; /*       set equal to 999.0         */
 	}
-	return(ios);
+	else {
+	  argument = ztemp;
+	  argument2 = htemp;
+	  itemp = atan2 (argument, argument2);
+	  if (htemp < sn) {
+	    dtemp = GEO_NAN;
+	  }
+	  else {
+	    hpx = htemp + xtemp;
+	    if (hpx < sn) {
+	      dtemp = PI;
+	    }
+	    else {
+	      argument = ytemp;
+	      argument2 = hpx;
+	      dtemp = 2.0 * atan2 (argument, argument2);
+	    }
+	  }
+	}
+      }
+      break;
+    default:  //printf("\nError in subroutine dihf");
+      break;
+    }
+  return (ios);
 }
 
-void NED2ECEF(geomagStruct *gStr){
-	double u,n,e,cLat,sLat,cLon,sLon,tmp;
-	n=gStr->Xm;
-	e=gStr->Ym;
-	u=-gStr->Zm;
+void
+NED2ECEF (geomagStruct *gStr)
+{
+  double u, n, e, cLat, sLat, cLon, sLon, tmp;
+  n = gStr->Xm;
+  e = gStr->Ym;
+  u = -gStr->Zm;
 
-	cLat=cos(gStr->latitude*PI/180.0);
-	sLat=sin(gStr->latitude*PI/180.0);
-	cLon=cos(gStr->longitude*PI/180.0);
-	sLon=sin(gStr->longitude*PI/180.0);
+  cLat = cos (gStr->latitude * PI / 180.0);
+  sLat = sin (gStr->latitude * PI / 180.0);
+  cLon = cos (gStr->longitude * PI / 180.0);
+  sLon = sin (gStr->longitude * PI / 180.0);
 
-	tmp=cLat*u-sLat*n;
-	gStr->Zm=sLat*u+cLat*n;
-	gStr->Xm=cLon*tmp-sLon*e;
-	gStr->Ym=sLon*tmp+cLon*e;
+  tmp = cLat * u - sLat * n;
+  gStr->Zm = sLat * u + cLat * n;
+  gStr->Xm = cLon * tmp - sLon * e;
+  gStr->Ym = sLon * tmp + cLon * e;
 }
 
 /*http://aa.usno.navy.mil/faq/docs/JD_Formula.php
----COMPUTES THE GREGORIAN CALENDAR DATE (YEAR,MONTH,DAY)
-   GIVEN THE JULIAN DATE (JD).
-ADAPTED for fractional part -UT time as per http://quasar.as.utexas.edu/BillInfo/JulianDatesG.html*/
+ ---COMPUTES THE GREGORIAN CALENDAR DATE (YEAR,MONTH,DAY)
+ GIVEN THE JULIAN DATE (JD).
+ ADAPTED for fractional part -UT time as per http://quasar.as.utexas.edu/BillInfo/JulianDatesG.html*/
 
-void JD2Greg(double JD,gTime *t){
-	// Volatile for compiler optimiz.. just to be sure for int
-	volatile int iJD,L,N,I,J,K;
-	iJD = (int)(JD+0.5); //for fractional part
-	L = iJD+68569;
+void
+JD2Greg (double JD, gTime *t)
+{
+  // Volatile for compiler optimiz.. just to be sure for int
+  volatile int iJD, L, N, I, J, K;
+  iJD = (int) (JD + 0.5); //for fractional part
+  L = iJD + 68569;
 
-	N= (4*L/146097);
-	L= (L-(146097*N+3)/4);
-	I= (4000*(L+1)/1461001);
-	L= (L-1461*I/4+31);
-	J= (80*L/2447);
-	K= (L-2447*J/80);
-	L= (J/11);
-	J= (J+2-12*L);
-	I= 100*(N-49)+I+L;
-	t->year= I;
-	t->month= J;
-	t->day= K;
-	t->UT=(JD-iJD+0.5)*24;
+  N = (4 * L / 146097);
+  L = (L - (146097 * N + 3) / 4);
+  I = (4000 * (L + 1) / 1461001);
+  L = (L - 1461 * I / 4 + 31);
+  J = (80 * L / 2447);
+  K = (L - 2447 * J / 80);
+  L = (J / 11);
+  J = (J + 2 - 12 * L);
+  I = 100 * (N - 49) + I + L;
+  t->year = I;
+  t->month = J;
+  t->day = K;
+  t->UT = (JD - iJD + 0.5) * 24;
 }
 
-double Greg2JD(gTime t){
-	double UT=t.UT;
-	UT=UT-12;
-	return t.day-32075+1461*(t.year+4800+(t.month-14)/12)/4+367*(t.month-2-(t.month-14)/12*12)/12-3*((t.year+4900+(t.month-14)/12)/100)/4+UT/24.0;
+double
+Greg2JD (gTime t)
+{
+  double UT = t.UT;
+  UT = UT - 12;
+  return t.day - 32075 + 1461 * (t.year + 4800 + (t.month - 14) / 12) / 4
+      + 367 * (t.month - 2 - (t.month - 14) / 12 * 12) / 12
+      - 3 * ((t.year + 4900 + (t.month - 14) / 12) / 100) / 4 + UT / 24.0;
 }
 
-double decyear(gTime t){
+double
+decyear (gTime t)
+{
 
-	int days[]={0,31,59,90,120,151,182,212,243,273,304,334};
-	int isleap =  (((t.year % 4) == 0) &&(((t.year % 100) != 0) || ((t.year % 400) == 0)));
-	int ndays=isleap?366:365;
+  int days[] =
+    { 0, 31, 59, 90, 120, 151, 182, 212, 243, 273, 304, 334 };
+  int isleap = (((t.year % 4) == 0)
+      && (((t.year % 100) != 0) || ((t.year % 400) == 0)));
+  int ndays = isleap ? 366 : 365;
 
-	double dayno = (days[t.month-1] + t.day + (t.month > 2 ? isleap : 0))-1;
+  double dayno = (days[t.month - 1] + t.day + (t.month > 2 ? isleap : 0)) - 1;
 
-	return ((double)t.year + (dayno / ndays))+t.UT/(ndays)/24.0;
+  return ((double) t.year + (dayno / ndays)) + t.UT / (ndays) / 24.0;
 }

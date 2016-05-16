@@ -313,8 +313,9 @@ update_sun_sensor (volatile adcs_state *state)
   float long_rough_demominator = 0;
   float lat_rough_numerator = 0;
   float lat_rough_demominator = 0;
+  float meas_Valid = 0;
 
-  /* AD7682 Response n-2 channel */
+  /* AD7682 Response to n-2 channel */
   state->v_sun_raw[3] = update_ad7682 (AD7682_CH1);
   state->v_sun_raw[4] = update_ad7682 (AD7682_CH2);
   state->v_sun_raw[0] = update_ad7682 (AD7682_CH3);
@@ -324,9 +325,10 @@ update_sun_sensor (volatile adcs_state *state)
   for (i = 0; i < 5; i++) {
     state->v_sun[i] = (float) state->v_sun_raw[i] * AD7682_COEF;
   }
-  /* Measure from sun sensor only: 4V5 − V1 − V2 − V3 − V4 ≥ 0.7 */
-  if ((4 * state->v_sun[4] - state->v_sun[0] - state->v_sun[1] - state->v_sun[2]
-      - state->v_sun[3]) >= SUN_SENSOR_VALID) {
+  /* Measure from sun sensor only if: 4*V5 − V1 − V2 − V3 − V4 ≥ 0.7 */
+  meas_Valid = 4 * state->v_sun[4] - state->v_sun[0] - state->v_sun[1]
+      - state->v_sun[2] - state->v_sun[3];
+  if ( meas_Valid >= SUN_SENSOR_VALID) {
     /* Calculate Rough Measures */
     for (i = 0; i < 5; i++) {
       long_rough_numerator += SUN_SENSOR_K[i] * state->v_sun[i];
@@ -337,10 +339,11 @@ update_sun_sensor (volatile adcs_state *state)
 	    * state->v_sun[j];
       }
     }
+    /* Calculate Rough Measures */
     if (long_rough_demominator != 0 & lat_rough_demominator != 0) {
-      state->long_rough = atan2 (long_rough_numerator, long_rough_demominator);
-      state->lat_rough = acos (
-	  lat_rough_numerator / sqrt (lat_rough_demominator));
+      state->long_rough = atan2f (long_rough_numerator, long_rough_demominator);
+      state->lat_rough = acosf (
+	  lat_rough_numerator / sqrtf (lat_rough_demominator));
       /* Calculate Fine Measures */
       for (i = 0; i < S_SUN_SENSOR; i++) {
 	for (j = 0; j < S_SUN_SENSOR - i; j++) {
