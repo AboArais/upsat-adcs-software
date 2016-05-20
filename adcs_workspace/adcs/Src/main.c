@@ -59,7 +59,7 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-adcs_state adcs_board_state;
+_adcs_state adcs_state;
 
 uint8_t uart_temp[200];
 /* USER CODE END PV */
@@ -138,7 +138,7 @@ main (void)
   /* Kick timer interrupt for timed threads */
   /*kick_TIM7_timed_interrupt(TIMED_EVENT_PERIOD);*/
 
-  adcs_init_state (&adcs_board_state);
+  init_sens (&adcs_state);
 
   HAL_reset_source (&sys_data.rsrc);
   update_boot_counter ();
@@ -148,74 +148,38 @@ main (void)
   HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
   HAL_UART_Receive_IT (&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
 
-  extern double SGDP4_jd0;
-  geomagStruct gStr;
-  gTime gT;
-  orbit_t orb;
-  double jd;
-  xyz_t pos, pos_ecef;
-  xyz_t vel;
-  float llh_ecef[3];
-  float gst, Cgst, Sgst;
-  uint16_t cnt;
-  int8_t imode;
-  /*TLE
+  /*
+   TLE
+
    ISS (ZARYA)
    1 25544U 98067A   16118.56765286  .00004329  00000-0  72029-4 0  9994
    2 25544  51.6443 310.5306 0002107  73.7950  28.9464 15.54350419997100
-   Generate in satpos_xyz() NaN
+   NaN
 
    ISS (ZARYA)
    1 25544U 98067A   16124.14033565  .00005548  00000-0  90051-4 0  9992
    2 25544  51.6441 282.7446 0001865  87.1449 259.7301 15.54414600997966
    OK
+
+   ISS (ZARYA)
+   1 25544U 98067A   16137.55001157  .00005721  00000-0  91983-4 0  9991
+   2 25544  51.6440 215.8562 0001995 108.3968  92.4187 15.54614828    61
+   OK
    */
-  orb.ep_year = 16; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
-  orb.ep_day = 124.14033565; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
-  orb.rev = 15.54414600; /* Mean motion, revolutions per day */
-  orb.bstar = 9.0051 * powf (10.0, -5); /* Drag term .*/
-  orb.eqinc = RAD(51.6441); /* Equatorial inclination, radians */
-  orb.ecc = 0.0001865; /* Eccentricity 0.0002107*/
-  orb.mnan = RAD(259.7301); /* Mean anomaly at epoch from elements, radians */
-  orb.argp = RAD(87.1449); /* Argument of perigee, radians */
-  orb.ascn = RAD(282.7446); /* Right ascension (ascending node), radians */
-  orb.norb = 99796; /* Orbit number, for elements */
-  orb.satno = 25544; /* Satellite number. */
-  imode = init_sgdp4 (&orb);
+  adcs_state.orb_tle.ep_year = 16;
+  adcs_state.orb_tle.ep_day = 137.55001157;
+  adcs_state.orb_tle.rev = 15.54614828;
+  adcs_state.orb_tle.bstar = 0.00175395 * powf (10.0, -5);
+  adcs_state.orb_tle.eqinc = RAD(51.6440);
+  adcs_state.orb_tle.ecc = 0.0001995;
+  adcs_state.orb_tle.mnan = RAD(92.4187);
+  adcs_state.orb_tle.argp = RAD(108.3968);
+  adcs_state.orb_tle.ascn = RAD(215.8562);
+  adcs_state.orb_tle.norb = 0;
+  adcs_state.orb_tle.satno = 13;
+  update_tle (&adcs_state);
 
-  switch (imode)
-    {
-    case SGDP4_ERROR:
-      /*printf ("# SGDP error\n");*/
-      break;
-    case SGDP4_NOT_INIT:
-      /*printf ("# SGDP not init\n");*/
-      break;
-    case SGDP4_ZERO_ECC:
-      /*printf ("# SGDP zero ecc\n");*/
-      break;
-    case SGDP4_NEAR_SIMP:
-      /*printf ("# SGP4 simple\n");*/
-      break;
-    case SGDP4_NEAR_NORM:
-      /*printf ("# SGP4 normal\n");*/
-      break;
-    case SGDP4_DEEP_NORM:
-      /*printf ("# SDP4 normal\n");*/
-      break;
-    case SGDP4_DEEP_RESN:
-      /*printf ("# SDP4 resonant\n");*/
-      break;
-    case SGDP4_DEEP_SYNC:
-      /*printf ("# SDP4 synchronous\n");*/
-      break;
-    default:
-      /*printf ("# SGDP mode not recognised!\n");*/
-      break;
-    }
-
-  jd = SGDP4_jd0;
-  cnt = 0;
+  uint8_t tleup = 0;
 
   /* USER CODE END 2 */
 
@@ -224,92 +188,63 @@ main (void)
   while (1) {
     import_pkt (OBC_APP_ID, &adcs_data.obc_uart);
 
-    adcs_update_state (&adcs_board_state);
-
-    /* sgdp4-geomag test */
-    if (cnt <= 100) {
-      if (satpos_xyz (jd, &pos, &vel) != SGDP4_ERROR) {
-	/* ECI to ECEF  correct?*/
-	gst = gha_aries (jd);
-	Cgst = cosf (gst);
-	Sgst = sinf (gst);
-	pos_ecef.x = pos.x * Cgst + pos.y * Sgst;
-	pos_ecef.y = -pos.x * Sgst + pos.y * Cgst;
-	pos_ecef.z = pos.z;
-	/* If get values from GPS */
-	/* ECEF, Cartesian to Spherical */
-	/* Altitude */
-	llh_ecef[2] = sqrtf (
-	    pos_ecef.x * pos_ecef.x + pos_ecef.y * pos_ecef.y
-		+ pos_ecef.z * pos_ecef.z);
-	/* Latitude [-90, 90] */
-	llh_ecef[0] = asinf (pos_ecef.z / llh_ecef[2]) * 180.0 / M_PI;
-	/* Longitude [-180, 180] */
-	llh_ecef[1] = atan2f (pos_ecef.y, pos_ecef.x) * 180.0 / M_PI;
-
-	//gStr.latitude = llh_ecef[0];
-	//gStr.longitude = llh_ecef[1];
-	//gStr.alt = llh_ecef[2];
-	//JD2Greg (jd, &gT);
-	//JD2Greg (jd, &gT);
-	//gT.decyear = decyear (gT);
-	//gStr.sdate = gT.decyear;
-
-	//geomag (&gStr);
-	//NED2ECEF(&gStr);
-	jd = jd + 1.0 / 1440.0; //every minute
-	snprintf (uart_temp, 100, "%.3f \t", jd);
-	HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 1000);
-
-	snprintf (uart_temp, 100, "%.3f \t", llh_ecef[2]);
-	HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 1000);
-
-	snprintf (uart_temp, 100, "%.3f \t", llh_ecef[0]);
-	HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 1000);
-
-	snprintf (uart_temp, 100, "%.3f \n", llh_ecef[1]);
-	HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 1000);
-
-	cnt++;
-      }
-      /* Update TLE from GPS */
+    update_sens (&adcs_state);
+    update_sgdp4 (&adcs_state);
+    update_geomag (&adcs_state);
+    if (tleup == 1) {
+      calculate_tle (&adcs_state);
+      update_tle (&adcs_state);
+      tleup = 0;
     }
+    HAL_Delay (100);
 
     /* Serial debug */
-    /*sprintf(uart_tmp, "T:%.3f \n", adcs_board_state.temp_c );
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+    snprintf (uart_temp, 100, "Epoch:%.2f \t", adcs_state.jd);
+    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 100);
+    snprintf (uart_temp, 100, "Alt:%.2f \t", adcs_state.p_ECEF_LLH.alt);
+    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 100);
+    snprintf (uart_temp, 100, "Lat:%.2f \t", adcs_state.p_ECEF_LLH.lat);
+    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 100);
+    snprintf (uart_temp, 100, "Lon:%.2f \n", adcs_state.p_ECEF_LLH.lon);
+    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 100);
 
-     sprintf(uart_tmp, "Xm:%.3f \t", adcs_board_state.rm_mag[0]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "Ym:%.3f \t", adcs_board_state.rm_mag[1]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "Zm:%.3f \n", adcs_board_state.rm_mag[2]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+    snprintf (uart_temp, 100, "UT:%f \n", adcs_state.gen_time.UT);
+    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 100);
+    snprintf (uart_temp, 100, "Decyear:%f \n", adcs_state.gen_time.decyear);
+    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_temp), 100);
 
-     sprintf(uart_tmp, "Vx:%.3f \t", adcs_board_state.gyr[0]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "Vy:%.3f \t", adcs_board_state.gyr[1]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "Vz:%.3f \n", adcs_board_state.gyr[2]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+    sprintf (uart_tmp, "T:%.3f \n", adcs_state.temp_c);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
 
-     sprintf(uart_tmp, "V1:%.3f \t", adcs_board_state.v_sun[0]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "V2:%.3f \t", adcs_board_state.v_sun[1]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "V3:%.3f \t", adcs_board_state.v_sun[2]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "V4:%.3f \t", adcs_board_state.v_sun[3]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "V5:%.3f \n", adcs_board_state.v_sun[4]);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
+    sprintf (uart_tmp, "Xm:%.3f \t", adcs_state.rm_mag[0]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "Ym:%.3f \t", adcs_state.rm_mag[1]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "Zm:%.3f \n", adcs_state.rm_mag[2]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
 
-     sprintf(uart_tmp, "Longitude:%.3f \t", adcs_board_state.long_sun);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);
-     sprintf(uart_tmp, "Latitude:%.3f \n", adcs_board_state.lat_sun);
-     HAL_UART_Transmit(&huart2, uart_tmp, strlen(uart_tmp), 100);*/
-    /****************/
-    HAL_Delay (100);
+    sprintf (uart_tmp, "Vx:%.3f \t", adcs_state.gyr[0]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "Vy:%.3f \t", adcs_state.gyr[1]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "Vz:%.3f \n", adcs_state.gyr[2]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+
+    sprintf (uart_tmp, "V1:%.3f \t", adcs_state.v_sun[0]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "V2:%.3f \t", adcs_state.v_sun[1]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "V3:%.3f \t", adcs_state.v_sun[2]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "V4:%.3f \t", adcs_state.v_sun[3]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "V5:%.3f \n", adcs_state.v_sun[4]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+
+    sprintf (uart_tmp, "Longitude:%.3f \t", adcs_state.long_sun);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "Latitude:%.3f \n", adcs_state.lat_sun);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

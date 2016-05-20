@@ -143,12 +143,6 @@ my_isnan (double d)
 #define MAXREAD MAXINBUFF-2
 /** Max to read 2 less than total size (just to be safe) **/
 
-#define MAXMOD 30
-/** Max number of models in a file **/
-
-#define PATH MAXREAD
-/** Max path and filename length **/
-
 #define EXT_COEFF1 (double)0
 #define EXT_COEFF2 (double)0
 #define EXT_COEFF3 (double)0
@@ -276,9 +270,6 @@ double xtemp, ytemp, ztemp;
 int
 geomag (geomagStruct *gStr)
 {
-#ifdef MAC
-  ccommand(argc, argv);
-#endif
   /*  Variable declaration  */
 
   double sdate = gStr->sdate;
@@ -287,116 +278,82 @@ geomag (geomagStruct *gStr)
   double alt = gStr->alt;
 
   /* Control variables */
-  int igdgc = 2; //GEOCENTRIC
+  int igdgc = 2; /* GEOCENTRIC */
 
-  static int max1[MAXMOD];
-  static int max2[MAXMOD];
-  static int max3[MAXMOD];
+  static int max1;
+  static int max2;
+  static int max3;
   static int nmax;
 
-  char inbuff[MAXINBUFF];
-  int modelI; /* Which model (Index) */
-
-  //Updated only the first time
-  static char model[MAXMOD][9];
-  static int nmodel; /* Number of models in file */
-
-  static double epoch[MAXMOD];
-  static double yrmin[MAXMOD];
-  static double yrmax[MAXMOD];
+  static uint8_t model[] = "IGRF2015";
+  static double epoch;
+  static double yrmin;
+  static double yrmax;
   static double minyr;
   static double maxyr;
-  static double altmin[MAXMOD];
-  static double altmax[MAXMOD];
+  static double altmin;
+  static double altmax;
   static double minalt;
   static double maxalt;
 
   /*  Obtain the desired model file and read the data  */
-  //UPDATE ONLY THE FIRST TIME, store in STATIC var
   if (PREV_SDATE == 0) {
-    modelI = 0;
-    model[modelI][9] = 'IGRF2015';
-    epoch[modelI] = 2015.00;
-    max1[modelI] = 13;
-    max2[modelI] = 8;
-    max3[modelI] = 0;
-    yrmin[modelI] = 2015.00;
-    yrmax[modelI] = 2020.00;
-    altmin[modelI] = -1.0;
-    altmax[modelI] = 600.0;
+    epoch = 2015.00;
+    max1 = 13;
+    max2 = 8;
+    max3 = 0;
+    yrmin = 2015.00;
+    yrmax = 2020.00;
+    altmin = -1.0;
+    altmax = 600.0;
 
-    minyr = yrmin[0];
-    maxyr = yrmax[0];
-
-    nmodel = 0;
+    minyr = yrmin;
+    maxyr = yrmax;
   }
 
-  //UPDATE COEFF ONLY IF SDATE-PREV_SDATE > ~1d??
-  if ((sdate - PREV_SDATE) > 1 / 365.0) {
-    PREV_SDATE = sdate;
-
-    /* Pick model */
-    for (modelI = 0; modelI < nmodel; modelI++)
-      if (sdate < yrmax[modelI])
-	break;
-    if (modelI == nmodel)
-      modelI--; /* if beyond end of last model use last model */
-
-    /* Get altitude min and max for selected model. */
-    minalt = altmin[modelI];
-    maxalt = altmax[modelI];
-
-    /* Get Coordinate prefs */
-    /* If needed modify ranges to reflect coords. */
-    if (igdgc == 2) {
-      minalt += 6371.2; /* Add radius to ranges. */
-      maxalt += 6371.2;
-    }
-
-    /** This will compute everything needed for 1 point in time. **/
-    if (max2[modelI] == 0) {
-      getshc (1, max1[modelI], 1);
-      getshc (1, max1[modelI + 1], 2);
-      nmax = interpsh (sdate, yrmin[modelI], max1[modelI], yrmin[modelI + 1],
-		       max1[modelI + 1], 3);
-      nmax = interpsh (sdate + 1, yrmin[modelI], max1[modelI],
-		       yrmin[modelI + 1], max1[modelI + 1], 4);
-    }
-    else {
-      getshc (1, max1[modelI], 1);
-      getshc (0, max2[modelI], 2);
-      nmax = extrapsh (sdate, epoch[modelI], max1[modelI], max2[modelI], 3);
-      nmax = extrapsh (sdate + 1, epoch[modelI], max1[modelI], max2[modelI], 4);
-    }
+  //if ((sdate - PREV_SDATE) > 1 / 365.0) {
+  PREV_SDATE = sdate;
+  /* Get altitude min and max for selected model. */
+  minalt = altmin;
+  maxalt = altmax;
+  /* Get Coordinate prefs */
+  /* If needed modify ranges to reflect coords. */
+  if (igdgc == 2) {
+    minalt += 6371.2; /* Add radius to ranges. */
+    maxalt += 6371.2;
   }
+  /** This will compute everything needed for 1 point in time. **/
+  getshc (1, max1, 1);
+  getshc (0, max2, 2);
+  nmax = extrapsh (sdate, epoch, max1, max2, 3);
+  nmax = extrapsh (sdate + 1, epoch, max1, max2, 4);
+  //}
 
   /* Do the first calculations */
   shval3 (igdgc, latitude, longitude, alt, nmax, 3, IEXT, EXT_COEFF1,
-	  EXT_COEFF2, EXT_COEFF3);
+  EXT_COEFF2,
+	  EXT_COEFF3);
   dihf (3);
   shval3 (igdgc, latitude, longitude, alt, nmax, 4, IEXT, EXT_COEFF1,
-	  EXT_COEFF2, EXT_COEFF3);
+  EXT_COEFF2,
+	  EXT_COEFF3);
   dihf (4);
-
   d = d * (RAD2DEG);
   i = i * (RAD2DEG);
 
   /* deal with geographic and magnetic poles */
-
-  if (h < 100.0) /* at magnetic poles */
-  {
+  /* at magnetic poles */
+  if (h < 100.0) {
     d = GEO_NAN;
     /* while rest is ok */
   }
-
-  if (90.0 - fabs (latitude) <= 0.001) /* at geographic poles */
-  {
+  /* at geographic poles */
+  if (90.0 - fabs (latitude) <= 0.001) {
     x = GEO_NAN;
     y = GEO_NAN;
     d = GEO_NAN;
     /* while rest is ok */
   }
-
   /** Above will compute everything for 1 point in time.  **/
   gStr->Xm = x;
   gStr->Ym = y;
@@ -528,7 +485,7 @@ double julday (month, day, year)
 int
 getshc (int iflag, int nmax_of_gh, int gh)
 {
-  char irat[9];
+  uint8_t irat[] = "IGRF2015";
   int ii, m, n, mm, nn;
   int ios;
   int line_num;
@@ -548,7 +505,6 @@ getshc (int iflag, int nmax_of_gh, int gh)
 	hh = COEFF2[line_num];
 	trash = COEFF3[line_num];
 	trash = COEFF4[line_num];
-	irat[9] = 'IGRF2015';
 	line_num++;
       }
       else {
@@ -558,7 +514,6 @@ getshc (int iflag, int nmax_of_gh, int gh)
 	trash = COEFF2[line_num];
 	g = COEFF3[line_num];
 	hh = COEFF4[line_num];
-	irat[9] = 'IGRF2015';
 	line_num++;
       }
       if ((nn != n) || (mm != m)) {
@@ -575,8 +530,6 @@ getshc (int iflag, int nmax_of_gh, int gh)
 	  gh2[ii] = g;
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine getshc")
-	  ;
 	  break;
 	}
       if (m != 0) {
@@ -590,8 +543,6 @@ getshc (int iflag, int nmax_of_gh, int gh)
 	    gh2[ii] = hh;
 	    break;
 	  default:
-	    DBUG_GEO("\nError in subroutine getshc")
-	    ;
 	    break;
 	  }
       }
@@ -665,8 +616,6 @@ extrapsh (double date, double dte1, int nmax1, int nmax2, int gh)
 	  }
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine extrapsh")
-	  ;
 	  break;
 	}
       nmax = nmax1;
@@ -687,8 +636,6 @@ extrapsh (double date, double dte1, int nmax1, int nmax2, int gh)
 	  }
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine extrapsh")
-	  ;
 	  break;
 	}
       nmax = nmax2;
@@ -707,8 +654,6 @@ extrapsh (double date, double dte1, int nmax1, int nmax2, int gh)
       }
       break;
     default:
-      DBUG_GEO("\nError in subroutine extrapsh")
-      ;
       break;
     }
   return (nmax);
@@ -778,8 +723,6 @@ interpsh (double date, double dte1, int nmax1, double dte2, int nmax2, int gh)
 	  }
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine extrapsh")
-	  ;
 	  break;
 	}
       nmax = nmax1;
@@ -800,8 +743,6 @@ interpsh (double date, double dte1, int nmax1, double dte2, int nmax2, int gh)
 	  }
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine extrapsh")
-	  ;
 	  break;
 	}
       nmax = nmax2;
@@ -820,8 +761,6 @@ interpsh (double date, double dte1, int nmax1, double dte2, int nmax2, int gh)
       }
       break;
     default:
-      DBUG_GEO("\nError in subroutine extrapsh")
-      ;
       break;
     }
   return (nmax);
@@ -931,8 +870,6 @@ shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
       ztemp = 0;
       break;
     default:
-      DBUG_GEO("\nError in subroutine shval3")
-      ;
       break;
     }
   sd = 0.0;
@@ -1007,8 +944,6 @@ shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
 	aa = rr * ghb[l];
 	break;
       default:
-	DBUG_GEO("\nError in subroutine shval3")
-	;
 	break;
       }
     if (m == 0) {
@@ -1023,8 +958,6 @@ shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
 	  ztemp = ztemp - aa * p[k];
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine shval3")
-	  ;
 	  break;
 	}
       l = l + 1;
@@ -1060,8 +993,6 @@ shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
 	  l = l + 2;
 	  break;
 	default:
-	  DBUG_GEO("\nError in subroutine shval3")
-	  ;
 	  break;
 	}
     }
@@ -1082,8 +1013,6 @@ shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
 	ztemp = ztemp + ext1 * slat + aa * clat;
 	break;
       default:
-	DBUG_GEO("\nError in subroutine shval3")
-	;
 	break;
       }
   }
@@ -1100,8 +1029,6 @@ shval3 (int igdgc, double flat, double flon, double elev, int nmax, int gh,
       ztemp = ztemp * cd - aa * sd;
       break;
     default:
-      DBUG_GEO("\nError in subroutine shval3")
-      ;
       break;
     }
   return (ios);
@@ -1215,12 +1142,13 @@ dihf (int gh)
 	}
       }
       break;
-    default:  //printf("\nError in subroutine dihf");
+    default:
       break;
     }
   return (ios);
 }
 
+/* */
 void
 NED2ECEF (geomagStruct *gStr)
 {
@@ -1240,15 +1168,20 @@ NED2ECEF (geomagStruct *gStr)
   gStr->Ym = sLon * tmp + cLon * e;
 }
 
-/*http://aa.usno.navy.mil/faq/docs/JD_Formula.php
+/*
+ * http://aa.usno.navy.mil/faq/docs/JD_Formula.php
  ---COMPUTES THE GREGORIAN CALENDAR DATE (YEAR,MONTH,DAY)
  GIVEN THE JULIAN DATE (JD).
- ADAPTED for fractional part -UT time as per http://quasar.as.utexas.edu/BillInfo/JulianDatesG.html*/
+ ADAPTED for fractional part -UT time as per
+ http://quasar.as.utexas.edu/BillInfo/JulianDatesG.html
+ */
 
+/* Conversion from a Julian date to a Gregorian calendar date
+   and Universal Time */
 void
 JD2Greg (double JD, gTime *t)
 {
-  // Volatile for compiler optimiz.. just to be sure for int
+  // Volatile for compiler optim
   volatile int iJD, L, N, I, J, K;
   iJD = (int) (JD + 0.5); //for fractional part
   L = iJD + 68569;
@@ -1268,6 +1201,7 @@ JD2Greg (double JD, gTime *t)
   t->UT = (JD - iJD + 0.5) * 24;
 }
 
+/* Conversion from a Gregorian calendar date to a Julian date */
 double
 Greg2JD (gTime t)
 {
@@ -1278,6 +1212,7 @@ Greg2JD (gTime t)
       - 3 * ((t.year + 4900 + (t.month - 14) / 12) / 100) / 4 + UT / 24.0;
 }
 
+/* Conversion from a Gregorian calendar date to decimal year */
 double
 decyear (gTime t)
 {

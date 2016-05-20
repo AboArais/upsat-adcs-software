@@ -22,8 +22,6 @@
 #ifndef _SGDP4H_H
 #define _SGDP4H_H
 
-#define STM32
-
 /*
  * Include files
  */
@@ -33,10 +31,8 @@
 #include <stddef.h>
 #include <time.h>
 #include <sys/types.h>
+#include <math.h> /* change to arm_math.h */
 
-#ifdef STM32
-#include <math.h>
-#endif
 /*
  * ================= SYSTEM SPECIFIC DEFINITIONS =====================
  */
@@ -44,21 +40,21 @@
 /* Use INLINE keyword when declaring inline functions */
 #define INLINE inline
 
-/* Some very common constants. */
-#ifndef PI
 #define PI M_PI
-#endif
-
 #define TWOPI   (2.0*PI)    /* Optimising compiler will deal with this! */
 #define PB2     (0.5*PI)
 #define PI180   (PI/180.0)
 
 #define SOLAR_DAY       (1440.0)             /* Minutes per 24 hours */
 #define SIDERIAL_DAY    (23.0*60.0 + 56.0 + 4.09054/60.0)   /* Against stars */
+#define SOLAR_DAY_SEC 86400.0 /* Seconds per 24 hours */
 
 #define EQRAD   (6378.137)                   /* Earth radius at equator, km */
 #define LATCON  (1.0/298.257)                /* Latitude radius constant */
 #define ECON    ((1.0-LATCON)*(1.0-LATCON))
+
+#define MU 398600.5 /*Earth gravitational constant for wgs-84 in km3 / s2 */
+#define EARTH_RADII 6378E3 /* Unit earth radii */
 
 #define JD1900 2415020.5    /* Julian day number for Jan 1st, 00:00 hours 1900 */
 
@@ -238,6 +234,13 @@ typedef struct xyz_s
   double z;
 } xyz_t;
 
+typedef struct llh_s
+{
+  float lon;
+  float lat;
+  float alt;
+} llh_t;
+
 typedef struct kep_s
 {
   double theta; /* Angle "theta" from equatorial plane (rad) = U. */
@@ -336,15 +339,10 @@ sincosf (float, float *, float *);
 
 /* ================= Stack space problems ? ======================== */
 
-#if !defined( MSDOS )
 /* Automatic variables, faster (?) but needs more stack space. */
+
 #define LOCAL_REAL   real
 #define LOCAL_DOUBLE double
-#else
-/* Static variables, slower (?) but little stack space. */
-#define LOCAL_REAL   static real
-#define LOCAL_DOUBLE static double
-#endif
 
 /* ======== Macro fixes for float/double in math.h type functions. ===== */
 
@@ -375,17 +373,12 @@ sincosf (float, float *, float *);
 #define SGDP4_DEEP_RESN 5
 #define SGDP4_DEEP_SYNC 6
 
-#ifdef STM32
-#include "satutlSTM32.h"
-#else
-#include "satutl.h"
-#endif
-
 /* ======================= Function prototypes ====================== */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/** aries.c from satutl.h **/
+
+double
+gha_aries (double jd);
 
 /** sgdp4.c **/
 
@@ -397,9 +390,5 @@ void
 kep2xyz (kep_t *K, xyz_t *pos, xyz_t *vel);
 int
 satpos_xyz (double jd, xyz_t *pos, xyz_t *vel);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* !_SGDP4H_H */

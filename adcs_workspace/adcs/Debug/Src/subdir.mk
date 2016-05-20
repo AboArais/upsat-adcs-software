@@ -8,9 +8,10 @@ C_SRCS += \
 ../Src/adcs_state.c \
 ../Src/aries.c \
 ../Src/geomag.c \
+../Src/gps.c \
 ../Src/main.c \
-../Src/satutlSTM32.c \
 ../Src/sgdp4.c \
+../Src/sgp4ext.c \
 ../Src/stm32f4xx_hal_msp.c \
 ../Src/stm32f4xx_it.c 
 
@@ -19,9 +20,10 @@ OBJS += \
 ./Src/adcs_state.o \
 ./Src/aries.o \
 ./Src/geomag.o \
+./Src/gps.o \
 ./Src/main.o \
-./Src/satutlSTM32.o \
 ./Src/sgdp4.o \
+./Src/sgp4ext.o \
 ./Src/stm32f4xx_hal_msp.o \
 ./Src/stm32f4xx_it.o 
 
@@ -30,9 +32,10 @@ C_DEPS += \
 ./Src/adcs_state.d \
 ./Src/aries.d \
 ./Src/geomag.d \
+./Src/gps.d \
 ./Src/main.d \
-./Src/satutlSTM32.d \
 ./Src/sgdp4.d \
+./Src/sgp4ext.d \
 ./Src/stm32f4xx_hal_msp.d \
 ./Src/stm32f4xx_it.d 
 

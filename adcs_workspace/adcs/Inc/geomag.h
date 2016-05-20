@@ -7,7 +7,8 @@
 #ifndef GEOMAG_H_
 #define GEOMAG_H_
 
-#define DBUG_GEO(x) ;
+#include "stm32f4xx_hal.h"
+#include <math.h> /* change to arm_math.h */
 
 typedef struct
 {

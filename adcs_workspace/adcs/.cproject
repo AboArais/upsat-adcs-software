@@ -77,10 +77,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.781390962.947730065" name="mass_storage_service.h" rcbsApplicability="disable" resourcePath="services/mass_storage_service.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.781390962.1844064148" name="large_data_service.h" rcbsApplicability="disable" resourcePath="services/large_data_service.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.781390962.947730065" name="mass_storage_service.h" rcbsApplicability="disable" resourcePath="services/mass_storage_service.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.781390962.700181125" name="gps.h" rcbsApplicability="disable" resourcePath="Inc/gps.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="Src/ferror.c|Src/deep.c|services/mass_storage_service.h|services/mass_storage_service.c|services/large_data_service.h|services/large_data_service.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="Src/satutlSTM32.c|Src/ferror.c|Src/deep.c|services/mass_storage_service.h|services/mass_storage_service.c|services/large_data_service.h|services/large_data_service.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

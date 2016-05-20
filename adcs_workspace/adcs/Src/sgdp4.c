@@ -66,7 +66,7 @@ static const char SCCSid[] =
 
 /* ================ single / double precision fix-ups =============== */
 
-#define NO_DEEP_SPACE 1
+#define NO_DEEP_SPACE
 
 #include "sgdp4h.h"
 
@@ -456,7 +456,7 @@ sgdp4 (double tsince, int withvel, kep_t *kep)
   int ii;
 
 #ifdef SGDP4_SNGL
-  real ts = (real)tsince;
+  real ts = (real) tsince;
 #else
 #define ts tsince
 #endif /* ! SGDP4_SNGL */
