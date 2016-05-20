@@ -276,25 +276,34 @@ void I2C_init(void){
 
 
 int32_t setDirection(int32_t RPMr){
+	// Disable IRQ only when direction need to change, to not disturb bridge pulses
 	if(RPMr > 0){
-		direction_ = 1;
-		AU_ptr = AU;
-		BU_ptr = BU;
-		CU_ptr = CU;
-		AD_ptr = AD;
-		BD_ptr = BD;
-		CD_ptr = CD;
+		if(direction_ != 1){
+			__disable_irq();
+			direction_ = 1;
+			AU_ptr = AU;
+			BU_ptr = BU;
+			CU_ptr = CU;
+			AD_ptr = AD;
+			BD_ptr = BD;
+			CD_ptr = CD;
+			__enable_irq();
+		}
 	}
 	else{
-		direction_ = -1;
-		RPMr = -RPMr;
-		AU_ptr = CU;
-		BU_ptr = BU;
-		CU_ptr = AU;
+		if(direction_ != -1){
+			__disable_irq();
+			direction_ = -1;
+			RPMr = -RPMr;
+			AU_ptr = CU;
+			BU_ptr = BU;
+			CU_ptr = AU;
 
-		AD_ptr = CD;
-		BD_ptr = BD;
-		CD_ptr = AD;
+			AD_ptr = CD;
+			BD_ptr = BD;
+			CD_ptr = AD;
+			__enable_irq();
+		}
 	}
 	return RPMr;
 }
