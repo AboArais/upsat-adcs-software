@@ -291,10 +291,10 @@ int32_t setDirection(int32_t RPMr){
 		}
 	}
 	else{
+		RPMr = -RPMr;
 		if(direction_ != -1){
 			__disable_irq();
 			direction_ = -1;
-			RPMr = -RPMr;
 			AU_ptr = CU;
 			BU_ptr = BU;
 			CU_ptr = AU;
