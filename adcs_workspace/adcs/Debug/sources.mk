@@ -19,6 +19,7 @@ services \
 adcs \
 adcs/hal/stm32 \
 Src \
+Inc \
 Drivers/STM32F4xx_HAL_Driver/Src \
 Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates \
 Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc \

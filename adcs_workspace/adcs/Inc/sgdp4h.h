@@ -22,23 +22,6 @@
 #ifndef _SGDP4H_H
 #define _SGDP4H_H
 
-#define STM32
-
-/*
- * Set up standard system-dependent names UNIX, LINUX, RISCOS, MSDOS, WIN32
- */
-#ifndef STM32
-#if defined( unix )
-# define UNIX
-# if defined( linux ) && !defined( LINUX )
-# define LINUX
-# endif
-#elif defined( __riscos ) && !defined( RISCOS )
-# define RISCOS
-#elif !defined( MSDOS ) && !defined( WIN32 ) && !defined( __CYGWIN__ )
-# define MSDOS
-#endif
-#endif
 /*
  * Include files
  */
@@ -48,66 +31,32 @@
 #include <stddef.h>
 #include <time.h>
 #include <sys/types.h>
-
-#ifdef STM32
-#include <math.h>
-#else
-#include <math.h>
-#endif
-
-#ifndef STM32
-#include <memory.h>
-#endif
-#ifdef UNIX
-#include <unistd.h>
-#endif
-
-#ifdef linux
-#include <stdint.h>
-void sincos(double x, double *s, double *c); /* declared where? */
-#endif
+#include <math.h> /* change to arm_math.h */
 
 /*
  * ================= SYSTEM SPECIFIC DEFINITIONS =====================
  */
 
 /* Use INLINE keyword when declaring inline functions */
-#ifdef WIN32
-#define INLINE __inline
-#elif defined( MSDOS )
-#define INLINE
-#else
-/*UNIX?*/
 #define INLINE inline
-#endif
 
-/* Some very common constants. */
-
-#ifndef M_PI
-#define M_PI  3.141592653589793
-#endif /* MSDOS */
-
-#ifndef NULL
-#define NULL   ((void *) 0)
-#endif
-
-#ifndef PI
 #define PI M_PI
-#endif
-
 #define TWOPI   (2.0*PI)    /* Optimising compiler will deal with this! */
 #define PB2     (0.5*PI)
 #define PI180   (PI/180.0)
 
 #define SOLAR_DAY       (1440.0)             /* Minutes per 24 hours */
 #define SIDERIAL_DAY    (23.0*60.0 + 56.0 + 4.09054/60.0)   /* Against stars */
+#define SOLAR_DAY_SEC 86400.0 /* Seconds per 24 hours */
 
 #define EQRAD   (6378.137)                   /* Earth radius at equator, km */
 #define LATCON  (1.0/298.257)                /* Latitude radius constant */
 #define ECON    ((1.0-LATCON)*(1.0-LATCON))
 
-#define JD1900 2415020.5    /* Julian day number for Jan 1st, 00:00 hours 1900 */
+#define MU 398600.5 /*Earth gravitational constant for wgs-84 in km3 / s2 */
+#define EARTH_RADII 6378E3 /* Unit earth radii */
 
+#define JD1900 2415020.5    /* Julian day number for Jan 1st, 00:00 hours 1900 */
 
 /*
  * =============================== MACROS ============================
@@ -132,84 +81,190 @@ void sincos(double x, double *s, double *c); /* declared where? */
  * All other compilers can have static inline functions.
  * (SQR is used badly here: do_cal.c, glat2lat.c, satpos.c, vmath.h).
  */
-static INLINE int       NINT(double  a) { return (int)(a > 0 ? a+0.5 : a-0.5); }
-static INLINE long      NLONG(double a) { return (long)(a > 0 ? a+0.5 : a-0.5); }
+static INLINE int
+NINT (double a)
+{
+  return (int) (a > 0 ? a + 0.5 : a - 0.5);
+}
+static INLINE long
+NLONG (double a)
+{
+  return (long) (a > 0 ? a + 0.5 : a - 0.5);
+}
 
-static INLINE double    DSQR(double a) { return(a*a); }
-static INLINE float     FSQR(float a)  { return(a*a); }
-static INLINE int       ISQR(int   a)  { return(a*a); }
+static INLINE double
+DSQR (double a)
+{
+  return (a * a);
+}
+static INLINE float
+FSQR (float a)
+{
+  return (a * a);
+}
+static INLINE int
+ISQR (int a)
+{
+  return (a * a);
+}
 
-static INLINE double    DCUBE(double a) { return(a*a*a); }
-static INLINE float     FCUBE(float a)  { return(a*a*a); }
-static INLINE int       ICUBE(int   a)  { return(a*a*a); }
+static INLINE double
+DCUBE (double a)
+{
+  return (a * a * a);
+}
+static INLINE float
+FCUBE (float a)
+{
+  return (a * a * a);
+}
+static INLINE int
+ICUBE (int a)
+{
+  return (a * a * a);
+}
 
-static INLINE double    DPOW4(double a) { a*=a; return(a*a); }
-static INLINE float     FPOW4(float a)  { a*=a; return(a*a); }
-static INLINE int       IPOW4(int   a)  { a*=a; return(a*a); }
+static INLINE double
+DPOW4 (double a)
+{
+  a *= a;
+  return (a * a);
+}
+static INLINE float
+FPOW4 (float a)
+{
+  a *= a;
+  return (a * a);
+}
+static INLINE int
+IPOW4 (int a)
+{
+  a *= a;
+  return (a * a);
+}
 
-static INLINE double    DMAX(double a,double b) { if (a>b) return  a; else return b; }
-static INLINE float     FMAX(float a, float b)  { if (a>b) return  a; else return b; }
-static INLINE int       IMAX(int   a, int   b)  { if (a>b) return  a; else return b; }
+static INLINE double
+DMAX (double a, double b)
+{
+  if (a > b)
+    return a;
+  else
+    return b;
+}
+static INLINE float
+FMAX (float a, float b)
+{
+  if (a > b)
+    return a;
+  else
+    return b;
+}
+static INLINE int
+IMAX (int a, int b)
+{
+  if (a > b)
+    return a;
+  else
+    return b;
+}
 
-static INLINE double    DMIN(double a,double b) { if (a<b) return  a; else return b; }
-static INLINE float     FMIN(float a, float b)  { if (a<b) return  a; else return b; }
-static INLINE int       IMIN(int   a, int   b)  { if (a<b) return  a; else return b; }
+static INLINE double
+DMIN (double a, double b)
+{
+  if (a < b)
+    return a;
+  else
+    return b;
+}
+static INLINE float
+FMIN (float a, float b)
+{
+  if (a < b)
+    return a;
+  else
+    return b;
+}
+static INLINE int
+IMIN (int a, int b)
+{
+  if (a < b)
+    return a;
+  else
+    return b;
+}
 
-static INLINE double    MOD2PI(double a) { a=fmod(a, TWOPI); return a < 0.0 ? a+TWOPI : a; }
-static INLINE double    MOD360(double a) { a=fmod(a, 360.0); return a < 0.0 ? a+360.0 : a; }
+static INLINE double
+MOD2PI (double a)
+{
+  a = fmod (a, TWOPI);
+  return a < 0.0 ? a + TWOPI : a;
+}
+static INLINE double
+MOD360 (double a)
+{
+  a = fmod (a, 360.0);
+  return a < 0.0 ? a + 360.0 : a;
+}
 
 /* ==================================================================== */
 
 typedef struct orbit_s
 {
-	/* Add the epoch time if required. */
+  /* Add the epoch time if required. */
 
-	int		ep_year;/* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
-	double	ep_day;	/* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
-	double	rev;	/* Mean motion, revolutions per day */
-	double	bstar;	/* Drag term .*/
-	double	eqinc;	/* Equatorial inclination, radians */
-	double	ecc;	/* Eccentricity */
-	double	mnan;	/* Mean anomaly at epoch from elements, radians */
-	double	argp;	/* Argument of perigee, radians */
-	double	ascn;	/* Right ascension (ascending node), radians */
-	double	smjaxs;	/* Semi-major axis, km */
-	long	norb;	/* Orbit number, for elements */
-	int		satno;	/* Satellite number. */
+  int ep_year;/* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
+  double ep_day; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
+  double rev; /* Mean motion, revolutions per day */
+  double bstar; /* Drag term .*/
+  double eqinc; /* Equatorial inclination, radians */
+  double ecc; /* Eccentricity */
+  double mnan; /* Mean anomaly at epoch from elements, radians */
+  double argp; /* Argument of perigee, radians */
+  double ascn; /* Right ascension (ascending node), radians */
+  double smjaxs; /* Semi-major axis, km */
+  long norb; /* Orbit number, for elements */
+  int satno; /* Satellite number. */
 
 } orbit_t;
 
 typedef struct xyz_s
 {
-	double x;
-	double y;
-	double z;
+  double x;
+  double y;
+  double z;
 } xyz_t;
+
+typedef struct llh_s
+{
+  float lon;
+  float lat;
+  float alt;
+} llh_t;
 
 typedef struct kep_s
 {
-	double theta;     /* Angle "theta" from equatorial plane (rad) = U. */
-	double ascn;      /* Right ascension (rad). */
-	double eqinc;     /* Equatorial inclination (rad). */
-	double radius;    /* Radius (km). */
-	double rdotk;
-	double rfdotk;
+  double theta; /* Angle "theta" from equatorial plane (rad) = U. */
+  double ascn; /* Right ascension (rad). */
+  double eqinc; /* Equatorial inclination (rad). */
+  double radius; /* Radius (km). */
+  double rdotk;
+  double rfdotk;
 
-	/*
-	 * Following are without short-term perturbations but used to
-	 * speed searchs.
-	 */
+  /*
+   * Following are without short-term perturbations but used to
+   * speed searchs.
+   */
 
-	double argp;	/* Argument of perigee at 'tsince' (rad). */
-	double smjaxs;	/* Semi-major axis at 'tsince' (km). */
-	double ecc;		/* Eccentricity at 'tsince'. */
+  double argp; /* Argument of perigee at 'tsince' (rad). */
+  double smjaxs; /* Semi-major axis at 'tsince' (km). */
+  double ecc; /* Eccentricity at 'tsince'. */
 
 } kep_t;
 
 /* ================ Single or Double precision options. ================= */
 
-//#define DEFAULT_TO_SNGL 0
-#define SGDP4_DBLE
+#define DEFAULT_TO_SNGL 1
+#define SGDP4_SNGL
 
 #if defined( SGDP4_SNGL ) || (DEFAULT_TO_SNGL && !defined( SGDP4_DBLE ))
 /* Single precision option. */
@@ -234,16 +289,16 @@ typedef double real;
 
 /* =========== Do we have sincos() functions available or not ? ======= */
 /*
-We can use the normal ANSI 'C' library functions in sincos() macros, but if
-we have sincos() functions they are much faster (25% under some tests). For
-DOS programs we use our assembly language functions using the 80387 (and
-higher) coprocessor FSINCOS instruction:
+ We can use the normal ANSI 'C' library functions in sincos() macros, but if
+ we have sincos() functions they are much faster (25% under some tests). For
+ DOS programs we use our assembly language functions using the 80387 (and
+ higher) coprocessor FSINCOS instruction:
 
-void sincos(double x, double *s, double *c);
-void sincosf(float x, float *s, float *c);
+ void sincos(double x, double *s, double *c);
+ void sincosf(float x, float *s, float *c);
 
-For the Sun 'C' compiler there is only the system supplied double precision
-version of these functions.
+ For the Sun 'C' compiler there is only the system supplied double precision
+ version of these functions.
  */
 
 #ifdef MACRO_SINCOS
@@ -264,8 +319,10 @@ version of these functions.
 #define SINCOS sincos
 #endif /* ! SGDP4_SNGL */
 
-void sincos(double, double *, double *);
-void sincosf(float, float *, float *);
+void
+sincos (double, double *, double *);
+void
+sincosf (float, float *, float *);
 
 #else
 /* Sun 'C' compiler. */
@@ -282,15 +339,10 @@ void sincosf(float, float *, float *);
 
 /* ================= Stack space problems ? ======================== */
 
-#if !defined( MSDOS )
 /* Automatic variables, faster (?) but needs more stack space. */
+
 #define LOCAL_REAL   real
 #define LOCAL_DOUBLE double
-#else
-/* Static variables, slower (?) but little stack space. */
-#define LOCAL_REAL   static real
-#define LOCAL_DOUBLE static double
-#endif
 
 /* ======== Macro fixes for float/double in math.h type functions. ===== */
 
@@ -321,39 +373,22 @@ void sincosf(float, float *, float *);
 #define SGDP4_DEEP_RESN 5
 #define SGDP4_DEEP_SYNC 6
 
-#ifdef STM32
-#include "satutlSTM32.h"
-#else
-#include "satutl.h"
-#endif
-
 /* ======================= Function prototypes ====================== */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/** aries.c from satutl.h **/
 
-/** deep.c **/
-
-int SGDP4_dpinit(double epoch, real omegao, real xnodeo, real xmo,
-		real orb_eo, real orb_xincl, real aodp, double xmdot,
-		real omgdot, real xnodot, double xnodp);
-
-int SGDP4_dpsec(double *xll, real *omgasm, real *xnodes, real *em,
-		real *xinc, double *xn, double tsince);
-
-int SGDP4_dpper(real *em, real *xinc, real *omgasm, real *xnodes,
-		double *xll, double tsince);
+double
+gha_aries (double jd);
 
 /** sgdp4.c **/
 
-int init_sgdp4(orbit_t *orb);
-int sgdp4(double tsince, int withvel, kep_t *kep);
-void kep2xyz(kep_t *K, xyz_t *pos, xyz_t *vel);
-int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel);
-
-#ifdef __cplusplus
-}
-#endif
+int
+init_sgdp4 (orbit_t *orb);
+int
+sgdp4 (double tsince, int withvel, kep_t *kep);
+void
+kep2xyz (kep_t *K, xyz_t *pos, xyz_t *vel);
+int
+satpos_xyz (double jd, xyz_t *pos, xyz_t *vel);
 
 #endif /* !_SGDP4H_H */
