@@ -1,35 +1,35 @@
 /**
- ******************************************************************************
- * File Name          : main.c
- * Description        : Main program body
- ******************************************************************************
- *
- * COPYRIGHT(c) 2016 STMicroelectronics
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *   1. Redistributions of source code must retain the above copyright notice,
- *      this list of conditions and the following disclaimer.
- *   2. Redistributions in binary form must reproduce the above copyright notice,
- *      this list of conditions and the following disclaimer in the documentation
- *      and/or other materials provided with the distribution.
- *   3. Neither the name of STMicroelectronics nor the names of its contributors
- *      may be used to endorse or promote products derived from this software
- *      without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- ******************************************************************************
- */
+  ******************************************************************************
+  * File Name          : main.c
+  * Description        : Main program body
+  ******************************************************************************
+  *
+  * COPYRIGHT(c) 2016 STMicroelectronics
+  *
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  *
+  ******************************************************************************
+  */
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 
@@ -41,6 +41,8 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
+CRC_HandleTypeDef hcrc;
+
 I2C_HandleTypeDef hi2c2;
 
 SD_HandleTypeDef hsd;
@@ -65,33 +67,22 @@ uint8_t uart_temp[200];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void
-SystemClock_Config (void);
-static void
-MX_GPIO_Init (void);
-static void
-MX_DMA_Init (void);
-static void
-MX_I2C2_Init (void);
-static void
-MX_SDIO_SD_Init (void);
-static void
-MX_SPI1_Init (void);
-static void
-MX_SPI2_Init (void);
-static void
-MX_TIM3_Init (void);
-static void
-MX_TIM4_Init (void);
-static void
-MX_UART4_Init (void);
-static void
-MX_USART2_UART_Init (void);
-static void
-MX_TIM7_Init (void);
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_I2C2_Init(void);
+static void MX_SDIO_SD_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_SPI2_Init(void);
+static void MX_TIM3_Init(void);
+static void MX_TIM4_Init(void);
+static void MX_UART4_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_TIM7_Init(void);
+static void MX_CRC_Init(void);
 
-void
-HAL_TIM_MspPostInit (TIM_HandleTypeDef *htim);
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+                
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -102,8 +93,7 @@ HAL_TIM_MspPostInit (TIM_HandleTypeDef *htim);
 
 /* USER CODE END 0 */
 
-int
-main (void)
+int main(void)
 {
 
   /* USER CODE BEGIN 1 */
@@ -115,23 +105,24 @@ main (void)
   /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init ();
+  HAL_Init();
 
   /* Configure the system clock */
-  SystemClock_Config ();
+  SystemClock_Config();
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init ();
-  MX_DMA_Init ();
-  MX_I2C2_Init ();
-  MX_SDIO_SD_Init ();
-  MX_SPI1_Init ();
-  MX_SPI2_Init ();
-  MX_TIM3_Init ();
-  MX_TIM4_Init ();
-  MX_UART4_Init ();
-  MX_USART2_UART_Init ();
-  MX_TIM7_Init ();
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_I2C2_Init();
+  MX_SDIO_SD_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_UART4_Init();
+  MX_USART2_UART_Init();
+  MX_TIM7_Init();
+  MX_CRC_Init();
 
   /* USER CODE BEGIN 2 */
 
@@ -178,8 +169,20 @@ main (void)
   adcs_state.orb_tle.norb = 0;
   adcs_state.orb_tle.satno = 13;
   update_tle (&adcs_state);
-
   uint8_t tleup = 0;
+
+  /* Spin-Torquer */
+  typedef struct
+  {
+    uint32_t flag;
+    int32_t RPRr;
+    uint32_t rampTime;
+    uint32_t crc;
+  } I2C_pck;
+
+  I2C_pck tx_pck;
+  I2C_pck rx_pck;
+  uint8_t *ptr8;
 
   /* USER CODE END 2 */
 
@@ -197,6 +200,39 @@ main (void)
       tleup = 0;
     }
     HAL_Delay (100);
+
+    /* Spin-Torquer Test */
+    tx_pck.RPRr = -10000;
+    tx_pck.rampTime = 10;
+    ptr8 = (uint8_t *) &tx_pck;
+
+    uint8_t sendbuf[16];
+
+    /* crc xor calculation */
+    uint32_t cbuf[3] = { tx_pck.flag, tx_pck.RPRr, tx_pck.rampTime};
+    tx_pck.crc = HAL_CRC_Calculate(&hcrc, cbuf, 3);
+
+    sendbuf[3] = (tx_pck.flag >> 24) & 0x000000FF;
+    sendbuf[2] = (tx_pck.flag >> 16) & 0x000000FF;
+    sendbuf[1] = (tx_pck.flag >> 8) & 0x000000FF;
+    sendbuf[0] = (tx_pck.flag) & 0x000000FF;
+
+    sendbuf[7] = (tx_pck.RPRr >> 24) & 0x000000FF;
+    sendbuf[6] = (tx_pck.RPRr >> 16) & 0x000000FF;
+    sendbuf[5] = (tx_pck.RPRr >> 8) & 0x000000FF;
+    sendbuf[4] = (tx_pck.RPRr) & 0x000000FF;
+
+    sendbuf[11] = (tx_pck.rampTime >> 24) & 0x000000FF;
+    sendbuf[10] = (tx_pck.rampTime >> 16) & 0x000000FF;
+    sendbuf[9] = (tx_pck.rampTime >> 8) & 0x000000FF;
+    sendbuf[8] = (tx_pck.rampTime) & 0x000000FF;
+
+    sendbuf[15] = (tx_pck.crc >> 24) & 0x000000FF;
+    sendbuf[14] = (tx_pck.crc >> 16) & 0x000000FF;
+    sendbuf[13] = (tx_pck.crc >> 8) & 0x000000FF;
+    sendbuf[12] = (tx_pck.crc) & 0x000000FF;
+
+    HAL_I2C_Mem_Write (&hi2c2, (0x03 << 0), sendbuf[0], 1, &sendbuf[1], 15, 10000);
 
     /* Serial debug */
     snprintf (uart_temp, 100, "Epoch:%.2f \t", adcs_state.jd);
@@ -245,9 +281,9 @@ main (void)
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "Latitude:%.3f \n", adcs_state.lat_sun);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    /* USER CODE END WHILE */
+  /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+  /* USER CODE BEGIN 3 */
 
   }
   /* USER CODE END 3 */
@@ -255,16 +291,14 @@ main (void)
 }
 
 /** System Clock Configuration
- */
-void
-SystemClock_Config (void)
+*/
+void SystemClock_Config(void)
 {
 
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
 
-  __HAL_RCC_PWR_CLK_ENABLE()
-  ;
+  __HAL_RCC_PWR_CLK_ENABLE();
 
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
@@ -277,27 +311,35 @@ SystemClock_Config (void)
   RCC_OscInitStruct.PLL.PLLN = 192;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
-  HAL_RCC_OscConfig (&RCC_OscInitStruct);
+  HAL_RCC_OscConfig(&RCC_OscInitStruct);
 
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
-      | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  HAL_RCC_ClockConfig (&RCC_ClkInitStruct, FLASH_LATENCY_0);
+  HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0);
 
-  HAL_SYSTICK_Config (HAL_RCC_GetHCLKFreq () / 1000);
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);
 
-  HAL_SYSTICK_CLKSourceConfig (SYSTICK_CLKSOURCE_HCLK);
+  HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
 
   /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority (SysTick_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+}
+
+/* CRC init function */
+void MX_CRC_Init(void)
+{
+
+  hcrc.Instance = CRC;
+  HAL_CRC_Init(&hcrc);
+
 }
 
 /* I2C2 init function */
-void
-MX_I2C2_Init (void)
+void MX_I2C2_Init(void)
 {
 
   hi2c2.Instance = I2C2;
@@ -309,13 +351,12 @@ MX_I2C2_Init (void)
   hi2c2.Init.OwnAddress2 = 0;
   hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  HAL_I2C_Init (&hi2c2);
+  HAL_I2C_Init(&hi2c2);
 
 }
 
 /* SDIO init function */
-void
-MX_SDIO_SD_Init (void)
+void MX_SDIO_SD_Init(void)
 {
 
   hsd.Instance = SDIO;
@@ -325,13 +366,12 @@ MX_SDIO_SD_Init (void)
   hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
   hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
   hsd.Init.ClockDiv = 0;
-  HAL_SD_Init (&hsd, &SDCardInfo);
+  HAL_SD_Init(&hsd, &SDCardInfo);
 
 }
 
 /* SPI1 init function */
-void
-MX_SPI1_Init (void)
+void MX_SPI1_Init(void)
 {
 
   hspi1.Instance = SPI1;
@@ -346,13 +386,12 @@ MX_SPI1_Init (void)
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 10;
-  HAL_SPI_Init (&hspi1);
+  HAL_SPI_Init(&hspi1);
 
 }
 
 /* SPI2 init function */
-void
-MX_SPI2_Init (void)
+void MX_SPI2_Init(void)
 {
 
   hspi2.Instance = SPI2;
@@ -367,13 +406,12 @@ MX_SPI2_Init (void)
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi2.Init.CRCPolynomial = 10;
-  HAL_SPI_Init (&hspi2);
+  HAL_SPI_Init(&hspi2);
 
 }
 
 /* TIM3 init function */
-void
-MX_TIM3_Init (void)
+void MX_TIM3_Init(void)
 {
 
   TIM_MasterConfigTypeDef sMasterConfig;
@@ -384,27 +422,26 @@ MX_TIM3_Init (void)
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 0;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_PWM_Init (&htim3);
+  HAL_TIM_PWM_Init(&htim3);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization (&htim3, &sMasterConfig);
+  HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig);
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  HAL_TIM_PWM_ConfigChannel (&htim3, &sConfigOC, TIM_CHANNEL_1);
+  HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1);
 
-  HAL_TIM_PWM_ConfigChannel (&htim3, &sConfigOC, TIM_CHANNEL_2);
+  HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2);
 
-  HAL_TIM_MspPostInit (&htim3);
+  HAL_TIM_MspPostInit(&htim3);
 
 }
 
 /* TIM4 init function */
-void
-MX_TIM4_Init (void)
+void MX_TIM4_Init(void)
 {
 
   TIM_MasterConfigTypeDef sMasterConfig;
@@ -415,31 +452,30 @@ MX_TIM4_Init (void)
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 0;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  HAL_TIM_PWM_Init (&htim4);
+  HAL_TIM_PWM_Init(&htim4);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization (&htim4, &sMasterConfig);
+  HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig);
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_1);
+  HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1);
 
-  HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_2);
+  HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2);
 
-  HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_3);
+  HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3);
 
-  HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_4);
+  HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4);
 
-  HAL_TIM_MspPostInit (&htim4);
+  HAL_TIM_MspPostInit(&htim4);
 
 }
 
 /* TIM7 init function */
-void
-MX_TIM7_Init (void)
+void MX_TIM7_Init(void)
 {
 
   TIM_MasterConfigTypeDef sMasterConfig;
@@ -448,17 +484,16 @@ MX_TIM7_Init (void)
   htim7.Init.Prescaler = 32;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = ControlLoop;
-  HAL_TIM_Base_Init (&htim7);
+  HAL_TIM_Base_Init(&htim7);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization (&htim7, &sMasterConfig);
+  HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig);
 
 }
 
 /* UART4 init function */
-void
-MX_UART4_Init (void)
+void MX_UART4_Init(void)
 {
 
   huart4.Instance = UART4;
@@ -469,13 +504,12 @@ MX_UART4_Init (void)
   huart4.Init.Mode = UART_MODE_TX_RX;
   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init (&huart4);
+  HAL_UART_Init(&huart4);
 
 }
 
 /* USART2 init function */
-void
-MX_USART2_UART_Init (void)
+void MX_USART2_UART_Init(void)
 {
 
   huart2.Instance = USART2;
@@ -486,82 +520,73 @@ MX_USART2_UART_Init (void)
   huart2.Init.Mode = UART_MODE_TX_RX;
   huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  HAL_UART_Init (&huart2);
+  HAL_UART_Init(&huart2);
 
 }
 
 /** 
- * Enable DMA controller clock
- */
-void
-MX_DMA_Init (void)
+  * Enable DMA controller clock
+  */
+void MX_DMA_Init(void) 
 {
   /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE()
-  ;
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Stream6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority (DMA1_Stream6_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ (DMA1_Stream6_IRQn);
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
 }
 
 /** Configure pins as 
- * Analog
- * Input
- * Output
- * EVENT_OUT
- * EXTI
- */
-void
-MX_GPIO_Init (void)
+        * Analog 
+        * Input 
+        * Output
+        * EVENT_OUT
+        * EXTI
+*/
+void MX_GPIO_Init(void)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE()
-  ;
-  __HAL_RCC_GPIOH_CLK_ENABLE()
-  ;
-  __HAL_RCC_GPIOA_CLK_ENABLE()
-  ;
-  __HAL_RCC_GPIOB_CLK_ENABLE()
-  ;
-  __HAL_RCC_GPIOD_CLK_ENABLE()
-  ;
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin (GPIOC, SD_EN_Pin | CNV_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, SD_EN_Pin|CNV_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin (GPIOA, GPS_EN_Pin | RM_CS_Pin | FM_nCE_Pin | FM_nWP_Pin,
-		     GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPS_EN_Pin|RM_CS_Pin|FM_nCE_Pin|FM_nWP_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin (GPIOB, SENS_EN_Pin | FM_nHLD_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, SENS_EN_Pin|FM_nHLD_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : SD_EN_Pin CNV_Pin */
-  GPIO_InitStruct.Pin = SD_EN_Pin | CNV_Pin;
+  GPIO_InitStruct.Pin = SD_EN_Pin|CNV_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init (GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : GPS_EN_Pin RM_CS_Pin FM_nCE_Pin FM_nWP_Pin */
-  GPIO_InitStruct.Pin = GPS_EN_Pin | RM_CS_Pin | FM_nCE_Pin | FM_nWP_Pin;
+  GPIO_InitStruct.Pin = GPS_EN_Pin|RM_CS_Pin|FM_nCE_Pin|FM_nWP_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init (GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SENS_EN_Pin FM_nHLD_Pin */
-  GPIO_InitStruct.Pin = SENS_EN_Pin | FM_nHLD_Pin;
+  GPIO_InitStruct.Pin = SENS_EN_Pin|FM_nHLD_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init (GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
@@ -572,12 +597,12 @@ MX_GPIO_Init (void)
 #ifdef USE_FULL_ASSERT
 
 /**
- * @brief Reports the name of the source file and the source line number
- * where the assert_param error has occurred.
- * @param file: pointer to the source file name
- * @param line: assert_param error line source number
- * @retval None
- */
+   * @brief Reports the name of the source file and the source line number
+   * where the assert_param error has occurred.
+   * @param file: pointer to the source file name
+   * @param line: assert_param error line source number
+   * @retval None
+   */
 void assert_failed(uint8_t* file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
@@ -590,11 +615,11 @@ void assert_failed(uint8_t* file, uint32_t line)
 #endif
 
 /**
- * @}
- */
+  * @}
+  */ 
 
 /**
- * @}
- */
+  * @}
+*/ 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
