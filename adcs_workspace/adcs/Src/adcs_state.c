@@ -8,6 +8,9 @@
 #include "adcs_state.h"
 #include "sun_sensor_coeff.h"
 
+extern I2C_HandleTypeDef hi2c2;
+extern SPI_HandleTypeDef hspi1;
+
 void
 init_sens (volatile _adcs_state *state)
 {

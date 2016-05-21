@@ -15,15 +15,8 @@
 /* SGP4 orbit propagator */
 #include "sgdp4h.h"
 #include "sgp4ext.h"
-
 /* Geomagnetic Field Model */
 #include "geomag.h"
-
-extern I2C_HandleTypeDef hi2c2;
-extern SPI_HandleTypeDef hspi1;
-
-/* for debug */
-extern UART_HandleTypeDef huart2;
 
 typedef struct
 {
@@ -82,12 +75,13 @@ update_ad7682 (uint8_t ch);
 void
 update_sun_sensor (volatile _adcs_state *state);
 
+/* TLE Update sgp4 propagator, geomagnetic field */
 void
-calculate_tle(volatile _adcs_state *state);
+calculate_tle (volatile _adcs_state *state);
 void
-update_tle(volatile _adcs_state *state);
+update_tle (volatile _adcs_state *state);
 void
-update_sgdp4(volatile _adcs_state *state);
+update_sgdp4 (volatile _adcs_state *state);
 void
-update_geomag(volatile _adcs_state *state);
+update_geomag (volatile _adcs_state *state);
 #endif /* INC_ADCS_STATE_H_ */

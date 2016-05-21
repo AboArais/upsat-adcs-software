@@ -10,6 +10,9 @@
 
 #include "stm32f4xx_hal.h"
 
+/* Define DEBUG_MODE */
+#define DEBUG_MODE
+
 /* IMU LSM9DS0,  I2C */
 #define GYRO_ADDR	0x6B
 #define GYRO_VAL	0x28
@@ -94,10 +97,13 @@
 #define M	(2.3)		/* Mass of cubesat in Kg */
 #define A	(0.1*0.1)	/* Cross-sectional effective Area m^2*/
 
-/* Set Up PWM Start up Duty-Cycle */
-#define MAGN_STARTUP_PWM_DUTYCYCLE	((uint32_t) 0)
+/* Spin Torquer */
+#define SPIN_ID 	0x03
 
-/* Configure timer */
+/* Set Up PWM Start up Duty-Cycle */
+#define MAGNETO_TORQUERS_PERIOD		((uint32_t) 0x0A)
+
+/* Configure control loop timer */
 extern TIM_HandleTypeDef htim7;
 #define TIMED_EVENT_PERIOD	((uint32_t)50000)
 void

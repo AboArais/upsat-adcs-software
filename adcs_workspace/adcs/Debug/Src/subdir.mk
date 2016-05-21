@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Src/adcs_configuration.c \
+../Src/adcs_control.c \
 ../Src/adcs_state.c \
 ../Src/aries.c \
 ../Src/geomag.c \
@@ -17,6 +18,7 @@ C_SRCS += \
 
 OBJS += \
 ./Src/adcs_configuration.o \
+./Src/adcs_control.o \
 ./Src/adcs_state.o \
 ./Src/aries.o \
 ./Src/geomag.o \
@@ -29,6 +31,7 @@ OBJS += \
 
 C_DEPS += \
 ./Src/adcs_configuration.d \
+./Src/adcs_control.d \
 ./Src/adcs_state.d \
 ./Src/aries.d \
 ./Src/geomag.d \
