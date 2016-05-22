@@ -61,8 +61,8 @@ void hw_init(void){
 	PWMval = 1000; // (avoid PWM noise)
 	CCR1r  = RPM2CNT(100)/6;
 
-	direction_ = 1;
-	setDirection(direction_);
+	direction_ = 0;
+	setDirection(1);
 	/*
 	 * TIM2 CCR is used for bridge pulse updates
 	 * ADC1_COMP Irq is for analog watchdog function. Every event causes the update of CCR, and frequency value
