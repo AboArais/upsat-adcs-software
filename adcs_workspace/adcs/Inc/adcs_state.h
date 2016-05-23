@@ -75,13 +75,16 @@ update_ad7682 (uint8_t ch);
 void
 update_sun_sensor (volatile _adcs_state *state);
 
-/* TLE Update sgp4 propagator, geomagnetic field */
+/* TLE Update sgp4 propagator */
 void
 calculate_tle (volatile _adcs_state *state);
 void
 update_tle (volatile _adcs_state *state);
 void
 update_sgdp4 (volatile _adcs_state *state);
+
+/* */
 void
 update_geomag (volatile _adcs_state *state);
+
 #endif /* INC_ADCS_STATE_H_ */

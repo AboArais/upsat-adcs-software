@@ -106,4 +106,5 @@
 			<resource resourceType="PROJECT" workspacePath="/adcs"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

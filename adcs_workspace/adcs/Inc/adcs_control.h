@@ -17,7 +17,10 @@ typedef struct
   uint32_t rampTime;
   uint32_t crc;
 
-  uint32_t duty_cycle[4];
+  int32_t current_x; /* in mA */
+  int32_t current_y;
+  uint32_t duty_cycle_x;
+  uint32_t duty_cycle_y;
 } _adcs_actuator;
 
 void

@@ -14,7 +14,8 @@ C_SRCS += \
 ../Src/sgdp4.c \
 ../Src/sgp4ext.c \
 ../Src/stm32f4xx_hal_msp.c \
-../Src/stm32f4xx_it.c 
+../Src/stm32f4xx_it.c \
+../Src/sun_pos.c 
 
 OBJS += \
 ./Src/adcs_configuration.o \
@@ -27,7 +28,8 @@ OBJS += \
 ./Src/sgdp4.o \
 ./Src/sgp4ext.o \
 ./Src/stm32f4xx_hal_msp.o \
-./Src/stm32f4xx_it.o 
+./Src/stm32f4xx_it.o \
+./Src/sun_pos.o 
 
 C_DEPS += \
 ./Src/adcs_configuration.d \
@@ -40,7 +42,8 @@ C_DEPS += \
 ./Src/sgdp4.d \
 ./Src/sgp4ext.d \
 ./Src/stm32f4xx_hal_msp.d \
-./Src/stm32f4xx_it.d 
+./Src/stm32f4xx_it.d \
+./Src/sun_pos.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

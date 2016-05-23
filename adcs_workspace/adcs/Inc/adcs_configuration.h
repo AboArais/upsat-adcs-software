@@ -92,16 +92,18 @@
 #define AD7682_COEF	0.0000625	/* Convert digital measure to analog */
 
 /* TLE update */
-#define CD	(2.3)		/* Drag Coefficient clear number */
-#define RHO	(5.75E-13)	/* Atmospheric Density Kg/m^3 in 400 km */
-#define M	(2.3)		/* Mass of cubesat in Kg */
-#define A	(0.1*0.1)	/* Cross-sectional effective Area m^2*/
+#define CD	2.3		/* Drag Coefficient clear number */
+#define RHO	5.75E-13	/* Atmospheric Density Kg/m^3 in 400 km */
+#define M	2.3		/* Mass of cubesat in Kg */
+#define A	0.1*0.1	/* Cross-sectional effective Area m^2*/
 
 /* Spin Torquer */
 #define SPIN_ID 	0x03
 
 /* Set Up PWM Start up Duty-Cycle */
-#define MAGNETO_TORQUERS_PERIOD		((uint32_t) 0x0A)
+#define MAGNETO_TORQUER_PERIOD		65535 /* 4095.9375 Hz */
+#define MAGNETO_TORQUER_RESISTANCE	135 /* in Ohm */
+#define MAX_VOLT_MAGNETO_TORQUER	5000 /* in mV */
 
 /* Configure control loop timer */
 extern TIM_HandleTypeDef htim7;

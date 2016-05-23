@@ -16,20 +16,21 @@ init_magneto_torquer (volatile _adcs_actuator *actuator)
 {
   TIM_MasterConfigTypeDef sMasterConfig;
 
-  actuator->duty_cycle[0] = 0;
-  actuator->duty_cycle[1] = 0;
-  actuator->duty_cycle[2] = 0;
-  actuator->duty_cycle[3] = 0;
+  actuator->current_x = 0;
+  actuator->current_y = 0;
+  actuator->duty_cycle_x = 0;
+  actuator->duty_cycle_y = 0;
+
   /* Set up period */
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 0;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = MAGNETO_TORQUERS_PERIOD;
+  htim4.Init.Period = MAGNETO_TORQUER_PERIOD;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_PWM_Init (&htim4);
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_ENABLE;
   HAL_TIMEx_MasterConfigSynchronization (&htim4, &sMasterConfig);
 
   HAL_TIM_Base_Start (&htim4);
@@ -41,13 +42,40 @@ init_magneto_torquer (volatile _adcs_actuator *actuator)
 }
 
 void
-update_magneto_torquer(volatile _adcs_actuator *actuator)
+update_magneto_torquer (volatile _adcs_actuator *actuator)
 {
-  /* Update duty-cycle */
-  htim4.Instance->CCR1 = actuator->duty_cycle[0];
-  htim4.Instance->CCR2 = actuator->duty_cycle[1];
-  htim4.Instance->CCR3 = actuator->duty_cycle[2];
-  htim4.Instance->CCR4 = actuator->duty_cycle[3];
+  if (actuator->current_x >= 0) {
+    actuator->duty_cycle_x = actuator->current_x * MAGNETO_TORQUER_RESISTANCE
+	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
+    htim4.Instance->CCR3 = actuator->duty_cycle_x;
+    htim4.Instance->CCR4 = MAGNETO_TORQUER_PERIOD;
+  }
+  else if (actuator->current_x < 0) {
+    actuator->duty_cycle_x = -actuator->current_x * MAGNETO_TORQUER_RESISTANCE
+	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
+    htim4.Instance->CCR3 = MAGNETO_TORQUER_PERIOD;
+    htim4.Instance->CCR4 = actuator->duty_cycle_x;
+  }
+  else {
+    /* error */
+  }
+
+  actuator->duty_cycle_y = 0;
+  if (actuator->current_y >= 0) {
+    actuator->duty_cycle_y = actuator->current_y * MAGNETO_TORQUER_RESISTANCE
+	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
+    htim4.Instance->CCR3 = actuator->duty_cycle_y;
+    htim4.Instance->CCR4 = MAGNETO_TORQUER_PERIOD;
+  }
+  else if (actuator->current_y < 0) {
+    actuator->duty_cycle_y = -actuator->current_y * MAGNETO_TORQUER_RESISTANCE
+	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
+    htim4.Instance->CCR3 = MAGNETO_TORQUER_PERIOD;
+    htim4.Instance->CCR4 = actuator->duty_cycle_y;
+  }
+  else {
+    /* error */
+  }
 }
 
 void
@@ -80,5 +108,5 @@ update_spin_torquer (volatile _adcs_actuator *actuator)
   sendbuf[13] = (actuator->crc >> 8) & 0x000000FF;
   sendbuf[12] = (actuator->crc) & 0x000000FF;
 
-  HAL_I2C_Mem_Write (&hi2c2, SPIN_ID, sendbuf[0], 1, &sendbuf[1], 15, 1000);
+  HAL_I2C_Mem_Write (&hi2c2, SPIN_ID, sendbuf[0], 1, &sendbuf[1], 15, 10000);
 }

@@ -39,6 +39,9 @@
 #include "adcs_control.h"
 #include "adcs.h"
 #include "service_utilities.h"
+
+#include "sun_pos.h"
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -115,7 +118,7 @@ main (void)
   /* USER CODE BEGIN 1 */
 
 #ifdef DEBUG_MODE
-  uint8_t uart_tmp[20];
+  int8_t uart_tmp[40];
 #endif
 
   /* USER CODE END 1 */
@@ -190,6 +193,8 @@ main (void)
   adcs_state.orb_tle.satno = 13;
   update_tle (&adcs_state);
   uint8_t tleup = 0;
+  double rsun[3];
+  double rtasc, decl;
 
   /* USER CODE END 2 */
 
@@ -202,55 +207,64 @@ main (void)
     update_sens (&adcs_state);
     update_sgdp4 (&adcs_state);
     update_geomag (&adcs_state);
+    sun (adcs_state.jd, &rsun, &rtasc, &decl);
     if (tleup == 1) {
       calculate_tle (&adcs_state);
       update_tle (&adcs_state);
       tleup = 0;
     }
-    adcs_actuator.RPM = 10000;
-    adcs_actuator.rampTime = 10;
+    adcs_actuator.RPM = -1000;
+    adcs_actuator.rampTime = 0;
+    adcs_actuator.current_x = 37;
+    adcs_actuator.current_y = 37;
     update_spin_torquer (&adcs_actuator);
-    adcs_actuator.duty_cycle[0] = 10;
-    adcs_actuator.duty_cycle[1] = 10;
-    adcs_actuator.duty_cycle[2] = 10;
-    adcs_actuator.duty_cycle[3] = 10;
     update_magneto_torquer (&adcs_actuator);
 
     HAL_Delay (100);
 
 #ifdef DEBUG_MODE
-    snprintf (uart_temp, 100, "Epoch:%.2f \t", adcs_state.jd);
-    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_tmp), 100);
-    snprintf (uart_temp, 100, "Alt:%.2f \t", adcs_state.p_ECEF_LLH.alt);
-    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_tmp), 100);
-    snprintf (uart_temp, 100, "Lat:%.2f \t", adcs_state.p_ECEF_LLH.lat);
-    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_tmp), 100);
-    snprintf (uart_temp, 100, "Lon:%.2f \n", adcs_state.p_ECEF_LLH.lon);
-    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_tmp), 100);
+    /*snprintf (uart_tmp, 100, "PWM_X:%d\t", adcs_actuator.duty_cycle_x);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%PWM_Y:%d\n", adcs_actuator.duty_cycle_y);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
 
-    snprintf (uart_temp, 100, "UT:%f \n", adcs_state.gen_time.UT);
-    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_tmp), 100);
-    snprintf (uart_temp, 100, "Decyear:%f \n", adcs_state.gen_time.decyear);
-    HAL_UART_Transmit (&huart2, uart_temp, strlen (uart_tmp), 100);
-
-    sprintf (uart_tmp, "T:%.3f \n", adcs_state.temp_c);
+    //snprintf (uart_tmp, 100, "UT:%.8f\t", adcs_state.gen_time.UT);
+    //HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    //snprintf (uart_tmp, 100, "Decyear:%.8f\t", adcs_state.gen_time.decyear);
+    //HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.5f\n", adcs_state.jd);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.2f\t", adcs_state.p_ECI.x);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.2f\t", adcs_state.p_ECI.y);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.2f\n", adcs_state.p_ECI.z);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.2f\t", rsun[0]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.2f\t", rsun[1]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    snprintf (uart_tmp, 100, "%.2f\n\n", rsun[2]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
 
-    sprintf (uart_tmp, "Xm:%.3f \t", adcs_state.rm_mag[0]);
+    /*sprintf (uart_tmp, "T:%.3f \n", adcs_state.temp_c);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
+
+    /*sprintf (uart_tmp, "Xm:%.3f \t", adcs_state.rm_mag[0]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "Ym:%.3f \t", adcs_state.rm_mag[1]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "Zm:%.3f \n", adcs_state.rm_mag[2]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
 
-    sprintf (uart_tmp, "Vx:%.3f \t", adcs_state.gyr[0]);
+    /*sprintf (uart_tmp, "Vx:%.3f \t", adcs_state.gyr[0]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "Vy:%.3f \t", adcs_state.gyr[1]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "Vz:%.3f \n", adcs_state.gyr[2]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
 
-    sprintf (uart_tmp, "V1:%.3f \t", adcs_state.v_sun[0]);
+   /* sprintf (uart_tmp, "V1:%.3f \t", adcs_state.v_sun[0]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "V2:%.3f \t", adcs_state.v_sun[1]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
@@ -259,11 +273,11 @@ main (void)
     sprintf (uart_tmp, "V4:%.3f \t", adcs_state.v_sun[3]);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
     sprintf (uart_tmp, "V5:%.3f \n", adcs_state.v_sun[4]);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
+    /*sprintf (uart_tmp, "Longitude:%.3f \t", adcs_state.long_sun);
     HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Longitude:%.3f \t", adcs_state.long_sun);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Latitude:%.3f \n", adcs_state.lat_sun);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    sprintf (uart_tmp, "Latitude:%.3f \n\n", adcs_state.lat_sun);
+    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
 #endif
     /* USER CODE END WHILE */
 
@@ -443,7 +457,7 @@ MX_TIM4_Init (void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 0;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = MAGNETO_TORQUERS_PERIOD;
+  htim4.Init.Period = 0xA0;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_PWM_Init (&htim4);
 
@@ -454,7 +468,7 @@ MX_TIM4_Init (void)
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
   HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_1);
 
   HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_2);
