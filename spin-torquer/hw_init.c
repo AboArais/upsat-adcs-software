@@ -40,8 +40,9 @@ void (*BD_ptr)(uint32_t);
 void (*CD_ptr)(uint32_t);
 
 
-volatile int32_t RPMr_;
-volatile int32_t RPMm_;
+//volatile int32_t RPMr_;
+volatile int32_t CNTr_;
+volatile int32_t CNTm_;
 volatile int32_t state;
 volatile int32_t direction_;
 
@@ -275,9 +276,9 @@ void I2C_init(void){
 }
 
 
-int32_t setDirection(int32_t RPMr){
+int32_t setDirection(int32_t CNTr){
 	// Disable IRQ only when direction need to change, to not disturb bridge pulses
-	if(RPMr > 0){
+	if(CNTr > 0){
 		if(direction_ != 1){
 			__disable_irq();
 			direction_ = 1;
@@ -291,7 +292,7 @@ int32_t setDirection(int32_t RPMr){
 		}
 	}
 	else{
-		RPMr = -RPMr;
+		CNTr = -CNTr;
 		if(direction_ != -1){
 			__disable_irq();
 			direction_ = -1;
@@ -305,7 +306,7 @@ int32_t setDirection(int32_t RPMr){
 			__enable_irq();
 		}
 	}
-	return RPMr;
+	return CNTr;
 }
 
 
@@ -341,7 +342,7 @@ void ADC1_COMP_IRQHandler(void){
 			//CCRtmp=(dt)/6; //6 steps per Electrical cycle, faster spin-up, less stable
 			Led1(1);
 			Led1(0);
-			if(6*CCRtmp>(RPM2CNT(RPMr_ - 10 - locked*200))){
+			if( 6*CCRtmp > ( RPM2CNT(CNT2RPM(CNTr_) - 10 - locked*200))){ // Was if(6*CCRtmp>(RPM2CNT(RPMr_ - 10 - locked*200))){
 				locked=0;
 				tx_pck.flag = MOTOR_INSYNC;
 				CCR1r=CCRtmp;
@@ -353,12 +354,11 @@ void ADC1_COMP_IRQHandler(void){
 				locked=1;
 				tx_pck.flag = MOTOR_LOCKED;
 				Led1(1);
-				CCR1r=RPM2CNT(RPMr_)/6;
+				CCR1r = CNTr_/6; // Was RPM2CNT(RPMr_)/6;
 			}
 
-			RPMm_ = CNT2RPM(CCRtmp*6);
-			tx_pck.RPRm = RPMm_;
-			tx_pck.flag = locked;
+			CNTm_ = CCRtmp*6;
+			tx_pck.CNTm = CNTm_;
 
 			ADC_AnalogWatchdogThresholdsConfig(ADC1,ADC_WDG_H,0);
 			ADC_ClearITPendingBit(ADC1,ADC_IT_AWD);
@@ -375,13 +375,13 @@ void TIM2_IRQHandler(void){
 		if(ADC_IRQ_cnt >12){ // No sensor update, reset RPMs.. raise some flags...
 			CCR1r = RPM2CNT(100)/6;
 			tx_pck.flag = MOTOR_STALL;
-			tx_pck.RPRm = tx_pck.RPRm/2;
+			tx_pck.CNTm *= 2;
 		}
 
-		CCR1r = SATUR2(CCR1r,RPM2CNT(40000)/6,RPM2CNT(50)/6); //saturate from 50 to 40k RPM, Highr RPM -> Low cnts. Maximum reasonable CCR1r is to guarantee update of CCR, even in RPMr = 0
+		CCR1r = SATUR2(CCR1r,RPM2CNT(40000)/6,RPM2CNT(100)/6); //saturate from 50 to 40k RPM, Highr RPM -> Low cnts. Maximum reasonable CCR1r is to guarantee update of CCR, even in RPMr = 0
 		TIM2->CCR1 += CCR1r;
 
-		if(RPMr_ > 100){
+		if(CNTr_ < RPM2CNT(100)){ //Was RPMr_ > 100
 			switch (Pstate){
 
 			// -----------------PMOS LOGIC-------------------

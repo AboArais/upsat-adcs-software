@@ -64,7 +64,7 @@ int main(void)
 	hw_init();
 	I2C_init();
 
-	RPMr_ = setDirection(10);
+	CNTr_ = setDirection(RPM2CNT(10));
 
 	tx_pck.dummy = 0;
 	while (1)
@@ -125,7 +125,7 @@ void I2C1_IRQHandler(void){
 			CRC_ResetDR();
 			ADC_ITConfig(ADC1,ADC_IT_AWD,DISABLE);
 			CRC_CalcCRC(tx_pck.flag);
-			CRC_CalcCRC(tx_pck.RPRm);
+			CRC_CalcCRC(tx_pck.CNTm);
 			CRC_CalcCRC(tx_pck.dummy);
 			tx_pck.crc = CRC->DR;
 			ADC_ITConfig(ADC1,ADC_IT_AWD,ENABLE);
@@ -158,7 +158,7 @@ void I2C1_IRQHandler(void){
 			CRC_CalcCRC(*ptr32++);
 			if( CRC->DR == (*ptr32) ){
 				//				rx_pck.flag |= Pck_Flag_NewAndReady;
-				RPMr_ = setDirection(rx_pck.RPRr);
+				CNTr_ = setDirection(rx_pck.CNTr);
 			}
 			I2C_state = I2C_Idle_Mode;
 			ptr = NULL;

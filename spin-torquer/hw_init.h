@@ -87,21 +87,22 @@ static inline void BD(uint32_t x){	TIM1->CCR2=(x);}
 // KEEP THEM PACKED..!
 typedef volatile struct {
 	uint32_t 	flag;
-	int32_t 	RPRr;
+	int32_t 	CNTr;
 	uint32_t 	rampTime;
 	uint32_t 	crc;
 }I2C_RX_pck;
 
 typedef volatile struct {
 	uint32_t 	flag;
-	int32_t 	RPRm;
+	int32_t 	CNTm;
 	uint32_t 	dummy;
 	uint32_t 	crc;
 }I2C_TX_pck;
 
 
-extern volatile int32_t RPMr_;
-extern volatile int32_t RPMm_;
+//extern volatile int32_t RPMr_;
+extern volatile int32_t CNTr_;
+extern volatile int32_t CNTm_;
 extern volatile int32_t direction_;
 extern volatile int32_t state;
 extern int32_t io_mtx;
@@ -114,6 +115,6 @@ void hw_init(void);
 void I2C_init(void);
 
 void delay_us(uint32_t delay);
-int32_t setDirection(int32_t RPMr);
+int32_t setDirection(int32_t CNTr);
 
 #endif /* HW_INIT_H_ */
