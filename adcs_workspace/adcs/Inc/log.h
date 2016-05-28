@@ -50,6 +50,7 @@ static char _log_uart_buffer[ADCS_UART_BUF_LEN];
 #else
 #define LOG_UART_DBG(huart, M, ...)
 #define LOG_UART_ERROR(huart, M, ...)
+#define LOG_UART_FILE(huart, M, ...)
 #endif
 
 #endif /* INC_LOG_H_ */

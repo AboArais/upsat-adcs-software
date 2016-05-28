@@ -118,4 +118,5 @@ update_spin_torquer (volatile _adcs_actuator *actuator)
     ; /* ERROR */
   }
 
+  actuator->m_RPM = actuator->RPM; /* Take from spin torquer the real RMP's */
 }

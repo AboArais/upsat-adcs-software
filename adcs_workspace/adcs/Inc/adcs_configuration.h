@@ -11,7 +11,7 @@
 #include "stm32f4xx_hal.h"
 
 #define ADCS_UART_BUF_LEN 2048
-#define ADCS_UART_DBG_EN 1
+#define ADCS_UART_DBG_EN 0
 #define UART_DBG_TIMEOUT 1000
 
 /* Configure control loop timer */

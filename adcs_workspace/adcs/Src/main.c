@@ -195,6 +195,8 @@ main (void)
   update_tle (&adcs_state);
   uint8_t tleup = 0;
 
+  int8_t test_buf[100];
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -212,7 +214,7 @@ main (void)
       HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
     }
 
-    LOG_UART_FILE(&huart2, "%.5f \t", adcs_state.jd);
+//    LOG_UART_FILE(&huart2, "%.5f \t", adcs_state.jd);
 
     update_sgdp4 (&adcs_state);
     update_geomag (&adcs_state);
@@ -222,31 +224,64 @@ main (void)
       update_tle (&adcs_state);
       tleup = 0;
     }
-    adcs_actuator.RPM = 10000;
-    adcs_actuator.rampTime = 0;
-    adcs_actuator.current_x = 37;
-    adcs_actuator.current_y = 37;
-    update_spin_torquer (&adcs_actuator);
-    update_magneto_torquer (&adcs_actuator);
+    /* ADCS tests */
+    snprintf (test_buf, 100, "%.3f %.3f %.3f", adcs_state.rm_mag[0],
+	      adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
+    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
+    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
 
-    //HAL_Delay (100);
+    snprintf (test_buf, 100, "%.3f %.3f %.3f", adcs_state.gyr[0],
+	      adcs_state.gyr[1], adcs_state.gyr[2]);
+    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
+    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+
+    snprintf (test_buf, 100, "%.3f %.3f %.3f %.3f %.3f", adcs_state.v_sun[0],
+	      adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3],
+	      adcs_state.v_sun[4], adcs_state.v_sun[5]);
+    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
+    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+
+    snprintf (test_buf, 100, "%.3f %.3f", adcs_state.long_sun,
+	      adcs_state.lat_sun);
+    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
+    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+
+    snprintf (test_buf, 100, "%d", adcs_actuator.m_RPM);
+    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
+    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+
+//    adcs_actuator.RPM = 10000;
+//    adcs_actuator.rampTime = 0;
+//    adcs_actuator.current_x = 37;
+//    adcs_actuator.current_y = 37;
+//    update_spin_torquer (&adcs_actuator);
+//    update_magneto_torquer (&adcs_actuator);
+
+//    HAL_Delay (100);
 
     LOG_UART_FILE(&huart2, "%.3f\t %.3f\t %.3f\n", adcs_state.mag_ECEF.Xm,
 		  adcs_state.mag_ECEF.Ym, adcs_state.mag_ECEF.Zm)
 
-    //LOG_UART_DBG(&huart2, "ECI: %.3f %.3f %.3f", adcs_state.p_ECI.x, adcs_state.p_ECI.y, adcs_state.p_ECI.z);
+    LOG_UART_DBG(&huart2, "ECI: %.3f %.3f %.3f", adcs_state.p_ECI.x,
+		 adcs_state.p_ECI.y, adcs_state.p_ECI.z);
 
-    //LOG_UART_DBG(&huart2, "SUN ECI: %.5f %.5f %.5f", adcs_state.p_sun_ECI[0], adcs_state.p_sun_ECI[1], adcs_state.p_sun_ECI[2]);
+    LOG_UART_DBG(&huart2, "SUN ECI: %.5f %.5f %.5f", adcs_state.p_sun_ECI[0],
+		 adcs_state.p_sun_ECI[1], adcs_state.p_sun_ECI[2]);
 
-    //LOG_UART_DBG(&huart2, "TEMP: %.3f", adcs_state.temp_c);
+    LOG_UART_DBG(&huart2, "TEMP: %.3f", adcs_state.temp_c);
 
-    //LOG_UART_DBG(&huart2, "MAG: %.3f %.3f %.3f", adcs_state.rm_mag[0], adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
+    LOG_UART_DBG(&huart2, "MAG: %.3f %.3f %.3f", adcs_state.rm_mag[0],
+		 adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
 
-    //LOG_UART_DBG(&huart2, "GYRO: %.3f %.3f %.3f", adcs_state.gyr[0], adcs_state.gyr[1], adcs_state.gyr[2]);
+    LOG_UART_DBG(&huart2, "GYRO: %.3f %.3f %.3f", adcs_state.gyr[0],
+		 adcs_state.gyr[1], adcs_state.gyr[2]);
 
-    //LOG_UART_DBG(&huart2, "VSUN: %.3f %.3f %.3f %.3f %.3f", adcs_state.v_sun[0], adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3], adcs_state.v_sun[4], adcs_state.v_sun[5]);
+    LOG_UART_DBG(&huart2, "VSUN: %.3f %.3f %.3f %.3f %.3f", adcs_state.v_sun[0],
+		 adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3],
+		 adcs_state.v_sun[4], adcs_state.v_sun[5]);
 
-    //LOG_UART_DBG(&huart2, "SUN: %.5f %.5f", adcs_state.long_sun, adcs_state.lat_sun);
+    LOG_UART_DBG(&huart2, "SUN: %.5f %.5f", adcs_state.long_sun,
+		 adcs_state.lat_sun);
 
     /* USER CODE END WHILE */
 

@@ -13,6 +13,7 @@
 /* Spin Torquer */
 #define SPIN_ID 	0x03
 #define SPIN_TIMEOUT	1000
+#define MAX_RPM		10000
 
 /* Set Up PWM Start up Duty-Cycle */
 #define MAGNETO_TORQUER_PERIOD		65535	/* 4095.9375 Hz */
@@ -26,6 +27,7 @@ typedef struct
   int32_t RPM;
   uint32_t rampTime;
   uint32_t crc;
+  int32_t m_RPM;
 
   int32_t current_x; /* in mA */
   int32_t current_y;
