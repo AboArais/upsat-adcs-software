@@ -5,7 +5,7 @@
  *      Author: azisi
  */
 
-#include "gps.h"
+#include "gps_pqNAV_L1.h"
 
 extern UART_HandleTypeDef huart4;
 

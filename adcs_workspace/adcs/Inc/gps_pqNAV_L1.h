@@ -5,8 +5,8 @@
  *      Author: azisi
  */
 
-#ifndef INC_GPS_H_
-#define INC_GPS_H_
+#ifndef INC_GPS_PQNAV_L1_H_
+#define INC_GPS_PQNAV_L1_H_
 
 #include "stm32f4xx_hal.h"
 #include "services.h"
@@ -28,4 +28,4 @@ HAL_GPS_UART_IRQHandler (UART_HandleTypeDef *huart);
 void
 UART_GPS_Receive_IT (UART_HandleTypeDef *huart);
 
-#endif /* INC_GPS_H_ */
+#endif /* INC_GPS_PQNAV_L1_H_ */

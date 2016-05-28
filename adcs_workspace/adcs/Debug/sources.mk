@@ -16,6 +16,7 @@ S_UPPER_DEPS :=
 # Every subdirectory with source files must be described here
 SUBDIRS := \
 services \
+core \
 adcs \
 adcs/hal/stm32 \
 Src \

@@ -39,9 +39,7 @@
 #include "adcs_control.h"
 #include "adcs.h"
 #include "service_utilities.h"
-
-#include "sun_pos.h"
-
+#include "log.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -65,7 +63,8 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-extern uint8_t uart_temp[200];
+
+uint8_t uart_temp[200];
 _adcs_state adcs_state;
 _adcs_actuator adcs_actuator;
 
@@ -117,10 +116,6 @@ main (void)
 
   /* USER CODE BEGIN 1 */
 
-#ifdef DEBUG_MODE
-  int8_t uart_tmp[40];
-#endif
-
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -150,12 +145,18 @@ main (void)
   /* Kick timer interrupt for timed threads */
   /*kick_TIM7_timed_interrupt(TIMED_EVENT_PERIOD);*/
 
+  /* Switch ON sensors-GPS */
+  adcs_switch (SWITCH_ON, SENSORS, &adcs_state);
+  adcs_switch (SWITCH_ON, GPS, &adcs_state);
+
   init_sens (&adcs_state);
   init_magneto_torquer (&adcs_actuator);
+  gps_init ();
 
   /* OBC Comm */
-  HAL_reset_source (&sys_data.rsrc);
-  update_boot_counter ();
+  uint8_t rsrc = 0;
+  HAL_reset_source (&rsrc);
+  set_reset_source (rsrc);
   pkt_pool_INIT ();
   uint16_t size = 0;
   event_crt_pkt_api (uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
@@ -193,92 +194,60 @@ main (void)
   adcs_state.orb_tle.satno = 13;
   update_tle (&adcs_state);
   uint8_t tleup = 0;
-  double rsun[3];
-  double rtasc, decl;
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    /* OBC Comm */
+
     import_pkt (OBC_APP_ID, &adcs_data.obc_uart);
     /* Update ADCS */
     update_sens (&adcs_state);
+    /* Send GPS sentences to OBC */
+    if (HAL_gps_rx (OBC_APP_ID, &(adcs_state.gps_buf)) == SATR_EOT) {
+      adcs_state.gps_buf[99] = 0;
+      event_crt_pkt_api (uart_temp, &(adcs_state.gps_buf), 666, 666, "", &size,
+			 SATR_OK);
+      HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+    }
+
+    LOG_UART_FILE(&huart2, "%.5f \t", adcs_state.jd);
+
     update_sgdp4 (&adcs_state);
     update_geomag (&adcs_state);
-    sun (adcs_state.jd, &rsun, &rtasc, &decl);
+    update_sun_pos (&adcs_state);
     if (tleup == 1) {
       calculate_tle (&adcs_state);
       update_tle (&adcs_state);
       tleup = 0;
     }
-    adcs_actuator.RPM = -1000;
+    adcs_actuator.RPM = 10000;
     adcs_actuator.rampTime = 0;
     adcs_actuator.current_x = 37;
     adcs_actuator.current_y = 37;
     update_spin_torquer (&adcs_actuator);
     update_magneto_torquer (&adcs_actuator);
 
-    HAL_Delay (100);
+    //HAL_Delay (100);
 
-#ifdef DEBUG_MODE
-    /*snprintf (uart_tmp, 100, "PWM_X:%d\t", adcs_actuator.duty_cycle_x);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%PWM_Y:%d\n", adcs_actuator.duty_cycle_y);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
+    LOG_UART_FILE(&huart2, "%.3f\t %.3f\t %.3f\n", adcs_state.mag_ECEF.Xm,
+		  adcs_state.mag_ECEF.Ym, adcs_state.mag_ECEF.Zm)
 
-    //snprintf (uart_tmp, 100, "UT:%.8f\t", adcs_state.gen_time.UT);
-    //HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    //snprintf (uart_tmp, 100, "Decyear:%.8f\t", adcs_state.gen_time.decyear);
-    //HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.5f\n", adcs_state.jd);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.2f\t", adcs_state.p_ECI.x);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.2f\t", adcs_state.p_ECI.y);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.2f\n", adcs_state.p_ECI.z);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.2f\t", rsun[0]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.2f\t", rsun[1]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    snprintf (uart_tmp, 100, "%.2f\n\n", rsun[2]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
+    //LOG_UART_DBG(&huart2, "ECI: %.3f %.3f %.3f", adcs_state.p_ECI.x, adcs_state.p_ECI.y, adcs_state.p_ECI.z);
 
-    /*sprintf (uart_tmp, "T:%.3f \n", adcs_state.temp_c);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
+    //LOG_UART_DBG(&huart2, "SUN ECI: %.5f %.5f %.5f", adcs_state.p_sun_ECI[0], adcs_state.p_sun_ECI[1], adcs_state.p_sun_ECI[2]);
 
-    /*sprintf (uart_tmp, "Xm:%.3f \t", adcs_state.rm_mag[0]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Ym:%.3f \t", adcs_state.rm_mag[1]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Zm:%.3f \n", adcs_state.rm_mag[2]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
+    //LOG_UART_DBG(&huart2, "TEMP: %.3f", adcs_state.temp_c);
 
-    /*sprintf (uart_tmp, "Vx:%.3f \t", adcs_state.gyr[0]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Vy:%.3f \t", adcs_state.gyr[1]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Vz:%.3f \n", adcs_state.gyr[2]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
+    //LOG_UART_DBG(&huart2, "MAG: %.3f %.3f %.3f", adcs_state.rm_mag[0], adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
 
-   /* sprintf (uart_tmp, "V1:%.3f \t", adcs_state.v_sun[0]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "V2:%.3f \t", adcs_state.v_sun[1]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "V3:%.3f \t", adcs_state.v_sun[2]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "V4:%.3f \t", adcs_state.v_sun[3]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "V5:%.3f \n", adcs_state.v_sun[4]);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
-    /*sprintf (uart_tmp, "Longitude:%.3f \t", adcs_state.long_sun);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);
-    sprintf (uart_tmp, "Latitude:%.3f \n\n", adcs_state.lat_sun);
-    HAL_UART_Transmit (&huart2, uart_tmp, strlen (uart_tmp), 100);*/
-#endif
+    //LOG_UART_DBG(&huart2, "GYRO: %.3f %.3f %.3f", adcs_state.gyr[0], adcs_state.gyr[1], adcs_state.gyr[2]);
+
+    //LOG_UART_DBG(&huart2, "VSUN: %.3f %.3f %.3f %.3f %.3f", adcs_state.v_sun[0], adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3], adcs_state.v_sun[4], adcs_state.v_sun[5]);
+
+    //LOG_UART_DBG(&huart2, "SUN: %.5f %.5f", adcs_state.long_sun, adcs_state.lat_sun);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -288,8 +257,7 @@ main (void)
 
 }
 
-/** System Clock Configuration
- */
+/** System Clock Configuration **/
 void
 SystemClock_Config (void)
 {

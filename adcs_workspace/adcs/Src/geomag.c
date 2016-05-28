@@ -311,7 +311,6 @@ geomag (geomagStruct *gStr)
     maxyr = yrmax;
   }
 
-  //if ((sdate - PREV_SDATE) > 1 / 365.0) {
   PREV_SDATE = sdate;
   /* Get altitude min and max for selected model. */
   minalt = altmin;
@@ -327,7 +326,6 @@ geomag (geomagStruct *gStr)
   getshc (0, max2, 2);
   nmax = extrapsh (sdate, epoch, max1, max2, 3);
   nmax = extrapsh (sdate + 1, epoch, max1, max2, 4);
-  //}
 
   /* Do the first calculations */
   shval3 (igdgc, latitude, longitude, alt, nmax, 3, IEXT, EXT_COEFF1,

@@ -44,6 +44,9 @@ init_magneto_torquer (volatile _adcs_actuator *actuator)
 void
 update_magneto_torquer (volatile _adcs_actuator *actuator)
 {
+  if (abs (actuator->current_x) > MAX_CURR_MAGNETO_TORQUER) {
+    actuator->current_x = MAX_CURR_MAGNETO_TORQUER;
+  }
   if (actuator->current_x >= 0) {
     actuator->duty_cycle_x = actuator->current_x * MAGNETO_TORQUER_RESISTANCE
 	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
@@ -60,7 +63,9 @@ update_magneto_torquer (volatile _adcs_actuator *actuator)
     /* error */
   }
 
-  actuator->duty_cycle_y = 0;
+  if (abs (actuator->current_y) > MAX_CURR_MAGNETO_TORQUER) {
+    actuator->current_y = MAX_CURR_MAGNETO_TORQUER;
+  }
   if (actuator->current_y >= 0) {
     actuator->duty_cycle_y = actuator->current_y * MAGNETO_TORQUER_RESISTANCE
 	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
@@ -108,5 +113,9 @@ update_spin_torquer (volatile _adcs_actuator *actuator)
   sendbuf[13] = (actuator->crc >> 8) & 0x000000FF;
   sendbuf[12] = (actuator->crc) & 0x000000FF;
 
-  HAL_I2C_Mem_Write (&hi2c2, SPIN_ID, sendbuf[0], 1, &sendbuf[1], 15, 10000);
+  if (HAL_I2C_Mem_Write (&hi2c2, SPIN_ID, sendbuf[0], 1, &sendbuf[1], 15,
+			 SPIN_TIMEOUT) != HAL_OK) {
+    ; /* ERROR */
+  }
+
 }

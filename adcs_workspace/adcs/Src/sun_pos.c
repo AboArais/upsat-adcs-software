@@ -78,7 +78,7 @@ sun (double jd, double *rsun, double *rtasc, double *decl)
   magr = 1.000140612 - 0.016708617 * cos (meananomaly)
       - 0.000139589 * cos (2.0 * meananomaly); // in au's
 
-  magr = magr*AU2KM;
+  //magr = magr*AU2KM;
 
   rsun[0] = magr * cos (eclplong);
   rsun[1] = magr * cos (obliquity) * sin (eclplong);

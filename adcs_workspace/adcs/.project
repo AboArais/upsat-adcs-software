@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
 	<name>adcs</name>
-	<comment />
+	<comment></comment>
 	<projects>
 	</projects>
 	<buildSpec>
@@ -29,6 +29,11 @@
 			<name>adcs</name>
 			<type>2</type>
 			<location>/home/azisi/Documents/UPSat/ecss_services/platform/adcs</location>
+		</link>
+		<link>
+			<name>core</name>
+			<type>2</type>
+			<location>/home/azisi/Documents/UPSat/ecss_services/core</location>
 		</link>
 		<link>
 			<name>services</name>

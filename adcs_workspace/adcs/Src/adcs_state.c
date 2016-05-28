@@ -12,11 +12,36 @@ extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
 
 void
+adcs_switch (_switch_state switch_state, _adcs_switch adcs_switch,
+	     volatile _adcs_state *state)
+{
+  GPIO_PinState gpio_write_value;
+
+  if (switch_state == SWITCH_ON) {
+    gpio_write_value = GPIO_PIN_RESET;
+  }
+  else {
+    gpio_write_value = GPIO_PIN_SET;
+  }
+
+  switch (adcs_switch)
+    {
+    case SENSORS:
+      HAL_GPIO_WritePin (SENS_EN_GPIO_Port, SENS_EN_Pin, gpio_write_value);
+      state->sens_sw = switch_state;
+      break;
+    case GPS:
+      HAL_GPIO_WritePin (GPS_EN_GPIO_Port, GPS_EN_Pin, gpio_write_value);
+      state->gps_sw = switch_state;
+      break;
+    default:
+      ;/* ERROR */
+    }
+}
+
+void
 init_sens (volatile _adcs_state *state)
 {
-  /* Enable sensors */
-  HAL_GPIO_WritePin (SENS_EN_GPIO_Port, SENS_EN_Pin, GPIO_PIN_RESET);
-  HAL_Delay (100);
   /* Init IMU LSM9DS0 */
   init_lsm9ds0 (state);
   /* Init Magnetometer */
@@ -80,7 +105,7 @@ calculate_tle (volatile _adcs_state *state)
   state->orb_tle.bstar = EARTH_RADII * CD * RHO * A * 0.5 / M; /* Drag term .*/
   /* Take time from GPS */
   state->orb_tle.ep_year = 16; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
-  state->orb_tle.ep_day = 124.14033565; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
+  state->orb_tle.ep_day = 137.55001157; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
   state->orb_tle.norb = 0; /* Orbit number, for elements */
   state->orb_tle.satno = 13; /* Satellite number. */
 
@@ -138,7 +163,16 @@ update_geomag (volatile _adcs_state *state)
   state->mag_ECEF.longitude = state->p_ECEF_LLH.lon;
   state->mag_ECEF.alt = state->p_ECEF_LLH.alt;
   geomag (&(state->mag_ECEF));
-  //NED2ECEF (&(state->mag_ECEF));
+  /* Convert from ECEF to Orbit frame*/
+}
+
+void
+update_sun_pos (volatile _adcs_state *state)
+{
+  double rtasc, decl;
+
+  sun (state->jd, &(state->p_sun_ECI), &rtasc, &decl);
+  /* Convert from ECI to Orbit frame */
 }
 
 void
@@ -200,14 +234,14 @@ init_lsm9ds0 (volatile _adcs_state *state)
   state->calib_gyr[1] = GYRO_OFFSET_Y;
   state->calib_gyr[2] = GYRO_OFFSET_Z;
   HAL_I2C_Mem_Read (&hi2c2, (GYRO_ADDR << 1), WHO_AM_I_G | GYRO_MASK, 1,
-		    i2c_temp, 1, 100);
+		    i2c_temp, 1, GYRO_TIMEOUT);
   if (i2c_temp[0] != GYRO_ID) {
     ;
   }
   uint8_t GyroCTRreg[5] =
     { 0b01111111, 0b00100101, 0b00000000, 0b10010000, 0b00000000 };
   HAL_I2C_Mem_Write (&hi2c2, (GYRO_ADDR << 1), CTRL_REG1_G | GYRO_MASK, 1,
-		     GyroCTRreg, 5, 100);
+		     GyroCTRreg, 5, GYRO_TIMEOUT);
 }
 
 /* Get ID and set the Cycle Count Registers */
@@ -228,7 +262,7 @@ init_rm3100 (volatile _adcs_state *state)
   spi_in_temp[0] = PNI_REVID | STATUS_MASK;
   spi_in_temp[1] = 0xFF;
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
-  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 2, 1000);
+  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 2, PNI_TIMEOUT);
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
   if (spi_out_temp[1] != 0x22) {
     ; //return true;
@@ -243,10 +277,10 @@ init_rm3100 (volatile _adcs_state *state)
   spi_in_temp[5] = PNI_CyclesMSB;
   spi_in_temp[6] = PNI_CyclesLSB;
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
-  HAL_SPI_Transmit (&hspi1, spi_in_temp, 7, 1000);
+  HAL_SPI_Transmit (&hspi1, spi_in_temp, 7, PNI_TIMEOUT);
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
   /* LSB/μT */
-  state->rm_gain = RM_GAIN;
+  state->rm_gain = PNI_GAIN;
 }
 
 /* Init ADT7420 */
@@ -262,7 +296,7 @@ init_adt7420 (volatile _adcs_state *state)
   i2c_temp[0] = 0;
   i2c_temp[1] = 0;
   HAL_I2C_Mem_Read (&hi2c2, ( ADT7420_ADDRESS << 1), ADT7420_REG_ID, 1,
-		    i2c_temp, 1, 100);
+		    i2c_temp, 1, ADT7420_TIMEOUT);
   if (i2c_temp[0] != ADT7420_DEFAULT_ID) {
     ;
   }
@@ -271,7 +305,7 @@ init_adt7420 (volatile _adcs_state *state)
   i2c_temp[0] = ADT7420_16BIT | ADT7420_OP_MODE_1_SPS;
   i2c_temp[1] = 0x00;
   HAL_I2C_Mem_Write (&hi2c2, ( ADT7420_ADDRESS << 1), ADT7420_REG_CONFIG, 1,
-		     i2c_temp, 1, 100);
+		     i2c_temp, 1, ADT7420_TIMEOUT);
 }
 
 /* Init sun sensor */
@@ -313,7 +347,7 @@ init_sun_sensor (volatile _adcs_state *state)
   HAL_Delay (6);
   HAL_GPIO_WritePin (CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
   HAL_Delay (1);
-  HAL_SPI_TransmitReceive (&hspi1, spi_in_tmp, spi_out_tmp, 5, 100);
+  HAL_SPI_TransmitReceive (&hspi1, spi_in_tmp, spi_out_tmp, 5, AD7682_TIMEOUT);
 
   HAL_Delay (1);
 
@@ -323,7 +357,7 @@ init_sun_sensor (volatile _adcs_state *state)
   HAL_Delay (6);
   HAL_GPIO_WritePin (CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
   HAL_Delay (1);
-  HAL_SPI_TransmitReceive (&hspi1, spi_in_tmp, spi_out_tmp, 5, 100);
+  HAL_SPI_TransmitReceive (&hspi1, spi_in_tmp, spi_out_tmp, 5, AD7682_TIMEOUT);
 
   if ((spi_out_tmp[2] != AD7682_CFG | AD7682_INCC | AD7682_CH1 | AD7682_BW)
       | (spi_out_tmp[3] != AD7682_REF | AD7682_SEQ | AD7682_RB)) {
@@ -344,7 +378,7 @@ update_rm3100 (volatile _adcs_state *state)
   spi_in_temp[0] = PNI_POLL;
   spi_in_temp[1] = SM_ALL_AXIS;
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
-  HAL_SPI_Transmit (&hspi1, spi_in_temp, 2, 1000);
+  HAL_SPI_Transmit (&hspi1, spi_in_temp, 2, PNI_TIMEOUT);
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
   /* Wait for LOW MISO */
   HAL_Delay (10);
@@ -372,7 +406,7 @@ update_rm3100 (volatile _adcs_state *state)
   spi_out_temp[9] = 0x00;
 
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
-  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 10, 1000);
+  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 10, PNI_TIMEOUT);
   HAL_GPIO_WritePin (RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
 
   /* X Axis */
@@ -399,6 +433,7 @@ update_rm3100 (volatile _adcs_state *state)
   *ptr-- = spi_out_temp[9];
   state->rm_raw[2] = tmp >> 8;
   state->rm_mag[2] = (float) state->rm_raw[2] * state->rm_gain;
+  /* Convert to Body Frame */
 }
 
 /* Update values for lsm9ds0 */
@@ -407,14 +442,14 @@ update_lsm9ds0 (volatile _adcs_state *state)
 {
   int i;
   /* IMU, Gyro measure */
-  /* Takes ~0.21ms when no error */
   HAL_I2C_Mem_Read (&hi2c2, (GYRO_ADDR << 1), GYRO_VAL | GYRO_MASK, 1,
-		    (uint8_t *) state->gyr_raw, 6, 300);
+		    (uint8_t *) state->gyr_raw, 6, GYRO_TIMEOUT);
   /* Handle return of I2C */
   for (i = 0; i < 3; i++) {
     state->gyr[i] = ((float) state->gyr_raw[i] - state->calib_gyr[i]) * 17.5
 	/ 1e3;/* 8.75/1e3 */
   }
+  /* Convert to Body Frame */
 }
 
 /* Update values for adt7420 */
@@ -429,10 +464,10 @@ update_adt7420 (volatile _adcs_state *state)
   i2c_temp[1] = 0;
   HAL_Delay (10);
   HAL_I2C_Mem_Read (&hi2c2, ( ADT7420_ADDRESS << 1), ADT7420_REG_TEMP_MSB, 1,
-		    i2c_temp, 1, 100);
+		    i2c_temp, 1, ADT7420_TIMEOUT);
   msb = i2c_temp[0];
   HAL_I2C_Mem_Read (&hi2c2, ( ADT7420_ADDRESS << 1), ADT7420_REG_TEMP_LSB, 1,
-		    i2c_temp, 1, 100);
+		    i2c_temp, 1, ADT7420_TIMEOUT);
   lsb = i2c_temp[0];
   state->temp_raw = msb << 8;
   state->temp_raw |= lsb;
@@ -496,6 +531,7 @@ update_sun_sensor (volatile _adcs_state *state)
 	}
       }
     }
+    /* Convert to Body Frame */
   }
 }
 
@@ -522,7 +558,7 @@ update_ad7682 (uint8_t ch)
   HAL_Delay (6);
   HAL_GPIO_WritePin (CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
   HAL_Delay (1);
-  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 5, 100);
+  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 5, AD7682_TIMEOUT);
   HAL_Delay (1);
 
   if ((spi_out_temp[2] == AD7682_CFG | AD7682_INCC | ch | AD7682_BW)
