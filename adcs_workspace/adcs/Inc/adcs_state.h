@@ -139,7 +139,7 @@ typedef struct
   float long_sun;
   float lat_sun;
   /* GPS */
-  uint8_t gps_buf[100];
+  uint8_t gps_buf[500];
   /* SGDP4 */
   xyz_t p_ECI, v_ECI;
   orbit_t orb_tle;

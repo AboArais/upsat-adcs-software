@@ -1,5 +1,5 @@
 /*
- * upsat-comms-software: Communication Subsystem Software for UPSat satellite
+ * upsat-adcs-software: ADCS Subsystem Software for UPSat satellite
  *
  *  Copyright (C) 2016, Libre Space Foundation <http://librespacefoundation.org/>
  *
@@ -28,7 +28,7 @@ static char _log_uart_buffer[ADCS_UART_BUF_LEN];
 #if ADCS_UART_DBG_EN
 #define LOG_UART_DBG(huart, M, ...) 									\
 	snprintf(_log_uart_buffer, ADCS_UART_BUF_LEN, 						\
-			"[DEBUG] %s:%d: " M "\n",									\
+			"[DEBUG] %s:%d: " M ,									\
 			 __FILE__, __LINE__, ##__VA_ARGS__);						\
 	HAL_UART_Transmit (huart, _log_uart_buffer,							\
 					   strlen (_log_uart_buffer), UART_DBG_TIMEOUT);				\
@@ -42,7 +42,7 @@ static char _log_uart_buffer[ADCS_UART_BUF_LEN];
 
 #define LOG_UART_ERROR(huart, M, ...) 									\
 	snprintf(_log_uart_buffer, ADCS_UART_BUF_LEN, 						\
-			"[ERROR] %s:%d: " M "\n",									\
+			"[ERROR] %s:%d: " M ,									\
 			 __FILE__, __LINE__, ##__VA_ARGS__);						\
 	HAL_UART_Transmit (huart, _log_uart_buffer,							\
 					   strlen (_log_uart_buffer), UART_DBG_TIMEOUT);				\

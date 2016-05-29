@@ -1,5 +1,5 @@
 /*
- * gps.c
+ * gps_pqNAV_L1.c
  *
  *  Created on: May 18, 2016
  *      Author: azisi
@@ -7,24 +7,30 @@
 
 #include "gps_pqNAV_L1.h"
 
+static uint8_t gps_temp[100];
+static uint8_t gps[4][100];
+static uint8_t gps_flag = false;
+
 extern UART_HandleTypeDef huart4;
 
 void
-gps_init ()
+gps_init (uint8_t *uart_gps_buf)
 {
-  HAL_UART_Receive_IT (&huart4, gps_buffer, GPS_BUF_SIZE);
+  HAL_UART_Receive_IT (&huart4, uart_gps_buf, GPS_BUF_SIZE);
 }
 
 SAT_returnState
-HAL_gps_rx (TC_TM_app_id app_id, uint8_t *uart_buf)
+HAL_gps_rx (TC_TM_app_id app_id, uint8_t *uart_gps_buf)
 {
   UART_HandleTypeDef *huart;
 
   huart = &huart4;
 
   if (huart->RxState == HAL_UART_STATE_READY) {
-    gps_buff_size = huart->RxXferSize - huart->RxXferCount;
-    HAL_UART_Receive_IT (huart, uart_buf, GPS_BUF_SIZE);
+    uint8_t gps_buffer_size = huart->RxXferSize - huart->RxXferCount;
+    uart_gps_buf[gps_buffer_size] = 0;
+    //LOG_UART_DBG(&huart2, "%c\n%s\n%c", 0x7E, adcs_state.gps_buf, 0x7E);
+    //HAL_UART_Receive_IT (huart, uart_gps_buf, GPS_BUF_SIZE);
     return SATR_EOT;
   }
   return SATR_OK;
@@ -80,16 +86,37 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
     *huart->pRxBuffPtr++ = c;
     huart->RxXferCount--;
 
-    __HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);
+    *huart->pRxBuffPtr++ = 0;
+
+    huart->pRxBuffPtr = gps_temp;
+    huart->RxXferCount = huart->RxXferSize;
+
+    gps_flag = true;
+    //__HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);
 
     /* Disable the UART Parity Error Interrupt */
-    __HAL_UART_DISABLE_IT(huart, UART_IT_PE);
-
+    //__HAL_UART_DISABLE_IT(huart, UART_IT_PE);
     /* Disable the UART Error Interrupt: (Frame error, noise error, overrun error) */
-    __HAL_UART_DISABLE_IT(huart, UART_IT_ERR);
-
+    //__HAL_UART_DISABLE_IT(huart, UART_IT_ERR);
     /* Rx process is completed, restore huart->RxState to Ready */
     huart->RxState = HAL_UART_STATE_READY;
+  }
+  else if ((huart->RxXferSize - huart->RxXferCount) == 6) {
+    *huart->pRxBuffPtr++ = c;
+    huart->RxXferCount--;
+
+    if (strncmp ("GGA", *huart->pRxBuffPtr - 3, 3) == 0) {
+      huart->pRxBuffPtr = &gps[GGA];
+    }
+    else if (strncmp ("GSA", *huart->pRxBuffPtr - 3, 3) == 0) {
+      huart->pRxBuffPtr = &gps[GSA];
+    }
+    else if (strncmp ("LSP", *huart->pRxBuffPtr - 3, 3) == 0) {
+      huart->pRxBuffPtr = &gps[LSP];
+    }
+    else if (strncmp ("LSV", *huart->pRxBuffPtr - 3, 3) == 0) {
+      huart->pRxBuffPtr = &gps[LSV];
+    }
   }
   else if (huart->RxXferSize > huart->RxXferCount) {
     *huart->pRxBuffPtr++ = c;
@@ -101,4 +128,38 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
 
   }
 
+}
+
+uint8_t
+get_gps_flag ()
+{
+  return gps_flag;
+}
+
+void
+get_gps_gga (uint8_t **gga)
+{
+
+  *gga = &gps[GGA];
+}
+
+void
+get_gps_gsa (uint8_t **gsa)
+{
+
+  *gsa = &gps[GSA];
+}
+
+void
+get_gps_lsp (uint8_t **lsp)
+{
+
+  *lsp = &gps[LSP];
+}
+
+void
+get_gps_LSV (uint8_t **lsv)
+{
+
+  *lsv = &gps[LSV];
 }
