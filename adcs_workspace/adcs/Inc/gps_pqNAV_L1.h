@@ -28,7 +28,8 @@ HAL_GPS_UART_IRQHandler (UART_HandleTypeDef *huart);
 void
 UART_GPS_Receive_IT (UART_HandleTypeDef *huart);
 
-void
-get_gps_buff (uint8_t **buf, uint8_t i, uint8_t *flag);
+void reset_gps_flag (const uint8_t i);
+
+void get_gps_buff (uint8_t **buf, const uint8_t i, uint8_t *flag);
 
 #endif /* INC_GPS_PQNAV_L1_H_ */
