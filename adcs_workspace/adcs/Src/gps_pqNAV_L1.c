@@ -120,8 +120,8 @@ void reset_gps_flag (const uint8_t i) {
   gps_flag[i] = false;
 }
 
-void get_gps_buff (uint8_t **buf, const uint8_t i, uint8_t *flag) {
+uint8_t * get_gps_buff (const uint8_t i, uint8_t *flag) {
 
-  *buf = &gps[i];
   *flag = gps_flag[i];
+  return gps[i];
 }

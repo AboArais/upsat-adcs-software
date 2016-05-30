@@ -30,6 +30,6 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart);
 
 void reset_gps_flag (const uint8_t i);
 
-void get_gps_buff (uint8_t **buf, const uint8_t i, uint8_t *flag);
+uint8_t * get_gps_buff (const uint8_t i, uint8_t *flag);
 
 #endif /* INC_GPS_PQNAV_L1_H_ */
