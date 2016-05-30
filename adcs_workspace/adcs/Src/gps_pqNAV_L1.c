@@ -6,10 +6,11 @@
  */
 
 #include "gps_pqNAV_L1.h"
+#include "stm32f4xx_hal.h"
 
-static uint8_t gps_temp[100];
-static uint8_t gps[4][100];
-static uint8_t gps_flag = false;
+static uint8_t gps[GPS_TEMP_BUFF][GPS_BUF_SIZE];
+static uint8_t gps_flag[GPS_TEMP_BUFF] = {false};
+static uint8_t gps_pointer = 0;
 
 extern UART_HandleTypeDef huart4;
 
@@ -88,10 +89,11 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
 
     *huart->pRxBuffPtr++ = 0;
 
-    huart->pRxBuffPtr = gps_temp;
+    huart->pRxBuffPtr = &gps[gps_pointer];
+    gps_flag[gps_pointer] = true;
+    if(++gps_pointer < GPS_TEMP_BUFF) { gps_pointer = 0; }
     huart->RxXferCount = huart->RxXferSize;
 
-    gps_flag = true;
     //__HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);
 
     /* Disable the UART Parity Error Interrupt */
@@ -100,23 +102,6 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
     //__HAL_UART_DISABLE_IT(huart, UART_IT_ERR);
     /* Rx process is completed, restore huart->RxState to Ready */
     huart->RxState = HAL_UART_STATE_READY;
-  }
-  else if ((huart->RxXferSize - huart->RxXferCount) == 6) {
-    *huart->pRxBuffPtr++ = c;
-    huart->RxXferCount--;
-
-    if (strncmp ("GGA", *huart->pRxBuffPtr - 3, 3) == 0) {
-      huart->pRxBuffPtr = &gps[GGA];
-    }
-    else if (strncmp ("GSA", *huart->pRxBuffPtr - 3, 3) == 0) {
-      huart->pRxBuffPtr = &gps[GSA];
-    }
-    else if (strncmp ("LSP", *huart->pRxBuffPtr - 3, 3) == 0) {
-      huart->pRxBuffPtr = &gps[LSP];
-    }
-    else if (strncmp ("LSV", *huart->pRxBuffPtr - 3, 3) == 0) {
-      huart->pRxBuffPtr = &gps[LSV];
-    }
   }
   else if (huart->RxXferSize > huart->RxXferCount) {
     *huart->pRxBuffPtr++ = c;
@@ -130,36 +115,8 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
 
 }
 
-uint8_t
-get_gps_flag ()
-{
-  return gps_flag;
-}
+void get_gps_buff (uint8_t **buf, uint8_t i, uint8_t *flag) {
 
-void
-get_gps_gga (uint8_t **gga)
-{
-
-  *gga = &gps[GGA];
-}
-
-void
-get_gps_gsa (uint8_t **gsa)
-{
-
-  *gsa = &gps[GSA];
-}
-
-void
-get_gps_lsp (uint8_t **lsp)
-{
-
-  *lsp = &gps[LSP];
-}
-
-void
-get_gps_LSV (uint8_t **lsv)
-{
-
-  *lsv = &gps[LSV];
+  *buf = &gps[i];
+  *flag = *gps_flag;
 }
