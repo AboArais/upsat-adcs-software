@@ -89,9 +89,10 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
 
     *huart->pRxBuffPtr++ = 0;
 
-    huart->pRxBuffPtr = &gps[gps_pointer];
     gps_flag[gps_pointer] = true;
     if(++gps_pointer < GPS_TEMP_BUFF) { gps_pointer = 0; }
+    huart->pRxBuffPtr = &gps[gps_pointer];
+
     huart->RxXferCount = huart->RxXferSize;
 
     //__HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);
@@ -109,7 +110,9 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
   }
 
   if (huart->RxXferCount == 0U) // errror
-      {
+  {
+        uart->pRxBuffPtr = &gps[gps_pointer];
+        huart->RxXferCount = huart->RxXferSize;
 
   }
 
