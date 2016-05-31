@@ -47,6 +47,8 @@ CRC_HandleTypeDef hcrc;
 
 I2C_HandleTypeDef hi2c2;
 
+IWDG_HandleTypeDef hiwdg;
+
 SD_HandleTypeDef hsd;
 HAL_SD_CardInfoTypedef SDCardInfo;
 
@@ -67,6 +69,9 @@ DMA_HandleTypeDef hdma_usart2_tx;
 uint8_t uart_temp[500];
 _adcs_state adcs_state;
 _adcs_actuator adcs_actuator;
+
+#pragma location = 0x0800C000
+const uint32_t key[(16 * 1000) / 4];
 
 /* USER CODE END PV */
 
@@ -97,6 +102,8 @@ static void
 MX_TIM7_Init (void);
 static void
 MX_CRC_Init (void);
+static void
+MX_IWDG_Init (void);
 
 void
 HAL_TIM_MspPostInit (TIM_HandleTypeDef *htim);
@@ -139,6 +146,7 @@ main (void)
   MX_USART2_UART_Init ();
   MX_TIM7_Init ();
   MX_CRC_Init ();
+  MX_IWDG_Init ();
 
   /* USER CODE BEGIN 2 */
 
@@ -149,14 +157,13 @@ main (void)
   adcs_switch (SWITCH_ON, SENSORS, &adcs_state);
   adcs_switch (SWITCH_ON, GPS, &adcs_state);
 
-  HAL_Delay(30000);
-
-//  init_sens (&adcs_state);
+  /* GPS delay */
+//  HAL_Delay(30000);
+  init_sens (&adcs_state);
 //  init_magneto_torquer (&adcs_actuator);
   gps_init (adcs_state.gps_buf);
 
-
-  /* OBC Comm */
+  /* ecss */
   uint8_t rsrc = 0;
   HAL_reset_source (&rsrc);
   set_reset_source (rsrc);
@@ -198,8 +205,9 @@ main (void)
   update_tle (&adcs_state);
   uint8_t tleup = 0;
 
-  int8_t test_buf[100];
-
+  uint8_t gps_cnt = 0;
+  uint8_t gps_flag = 0;
+  uint8_t *test_buf;
 
   /* USER CODE END 2 */
 
@@ -207,66 +215,62 @@ main (void)
   /* USER CODE BEGIN WHILE */
   while (1) {
 
-    //import_pkt (OBC_APP_ID, &adcs_data.obc_uart);
+    import_pkt (OBC_APP_ID, &adcs_data.obc_uart);
     /* Update ADCS */
-//    update_sens (&adcs_state);
+    update_sens (&adcs_state);
     /* Send GPS sentences to OBC */
-    if (HAL_gps_rx (OBC_APP_ID, &(adcs_state.gps_buf)) == SATR_EOT) {
-      //adcs_state.gps_buf[85] = 0;
-//      event_crt_pkt_api (uart_temp, &(adcs_state.gps_buf), 666, 666, "", &size,
-//			 SATR_OK);
-//      HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-      //LOG_UART_DBG(&huart2, "%c\n%s\n%c", 0x7E, adcs_state.gps_buf, 0x7E);
-      sprintf(uart_temp, "%c\n%s\n%c", 0x7E, adcs_state.gps_buf, 0x7E);
-      //HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, strlen(uart_temp));
-      //LOG_UART_DBG(&huart2, "%c\n%s\n%c", 0x7E, adcs_state.gps_buf, 0x7E);
-      HAL_UART_Transmit_DMA (&huart2, uart_temp, strlen(uart_temp));
+    for (gps_cnt = 0; gps_cnt < 15; gps_cnt++) {
+      test_buf = get_gps_buff (gps_cnt, &gps_flag);
 
-      HAL_UART_Receive_IT (&huart4, adcs_state.gps_buf, GPS_BUF_SIZE);
+      if (gps_flag == 1) {
+	reset_gps_flag (gps_cnt);
+//	LOG_UART_DBG(&huart2, "%s\n", test_buf);
+//	LOG_UART_DBG(&huart2, "%d\n", gps_cnt);
+      }
     }
 
 //    LOG_UART_FILE(&huart2, "%.5f \t", adcs_state.jd);
-
-    update_sgdp4 (&adcs_state);
-    update_geomag (&adcs_state);
-    update_sun_pos (&adcs_state);
-    if (tleup == 1) {
-      calculate_tle (&adcs_state);
-      update_tle (&adcs_state);
-      tleup = 0;
-    }
+//    update_sgdp4 (&adcs_state);
+//    update_geomag (&adcs_state);
+//    update_sun_pos (&adcs_state);
+//    if (tleup == 1) {
+//      calculate_tle (&adcs_state);
+//      update_tle (&adcs_state);
+//      tleup = 0;
+//    }
     /* ADCS tests */
 //    snprintf (test_buf, 100, "%.3f %.3f %.3f\n", adcs_state.rm_mag[0],
 //	      adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
 //    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
 //    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-//
+
 //    snprintf (test_buf, 100, "%.3f %.3f %.3f\n", adcs_state.gyr[0],
 //	      adcs_state.gyr[1], adcs_state.gyr[2]);
 //    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
 //    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-//
 //    snprintf (test_buf, 100, "%.3f %.3f %.3f %.3f %.3f\n", adcs_state.v_sun[0],
 //	      adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3],
 //	      adcs_state.v_sun[4], adcs_state.v_sun[5]);
 //    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
 //    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-//
+
 //    snprintf (test_buf, 100, "%.3f %.3f\n", adcs_state.long_sun,
 //	      adcs_state.lat_sun);
 //    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
 //    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-//
+
 //    snprintf (test_buf, 100, "%d\n", adcs_actuator.m_RPM);
 //    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
 //    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-//    adcs_actuator.RPM = 10;
-//    adcs_actuator.rampTime = 0;
-//    adcs_actuator.current_x = 37;
-//    adcs_actuator.current_y = 37;
-//    update_spin_torquer (&adcs_actuator);
+
+    // Test negative RMPs
+    adcs_actuator.RPM = 10;
+    adcs_actuator.rampTime = 0;
+    adcs_actuator.current_x = 37;
+    adcs_actuator.current_y = 37;
+    update_spin_torquer (&adcs_actuator);
 //    update_magneto_torquer (&adcs_actuator);
-//    HAL_Delay (100);
+
 //    LOG_UART_FILE(&huart2, "%.3f\t %.3f\t %.3f\n", adcs_state.mag_ECEF.Xm,
 //		  adcs_state.mag_ECEF.Ym, adcs_state.mag_ECEF.Zm)
 //
@@ -275,21 +279,24 @@ main (void)
 //
 //    LOG_UART_DBG(&huart2, "SUN ECI: %.5f %.5f %.5f", adcs_state.p_sun_ECI[0],
 //		 adcs_state.p_sun_ECI[1], adcs_state.p_sun_ECI[2]);
-//
-//    LOG_UART_DBG(&huart2, "TEMP: %.3f", adcs_state.temp_c);
-//
-//    LOG_UART_DBG(&huart2, "MAG: %.3f %.3f %.3f", adcs_state.rm_mag[0],
-//		 adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
-//
-//    LOG_UART_DBG(&huart2, "GYRO: %.3f %.3f %.3f", adcs_state.gyr[0],
-//		 adcs_state.gyr[1], adcs_state.gyr[2]);
-//    LOG_UART_DBG(&huart2, "%c\nVSUN: %.3f %.3f %.3f %.3f %.3f\n%c", 0x7E,
-//		 adcs_state.v_sun[0], adcs_state.v_sun[1], adcs_state.v_sun[2],
-//		 adcs_state.v_sun[3], adcs_state.v_sun[4], adcs_state.v_sun[5],
-//		 0x7E);
 
-//    LOG_UART_DBG(&huart2, "SUN: %.5f %.5f", adcs_state.long_sun,
-//		 adcs_state.lat_sun);
+//    LOG_UART_DBG(&huart2, "TEMP: %.3f", adcs_state.temp_c);
+
+//    LOG_UART_FILE(&huart2, "%.3f %.3f %.3f\n", adcs_state.rm_mag[0],
+//		  adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
+
+//    LOG_UART_DBG(&huart2, "%d\n", adcs_actuator.m_RPM);
+//    LOG_UART_DBG(&huart2, "%d\n", adcs_actuator.flag);
+
+//    LOG_UART_DBG(&huart2, "GYRO: %.3f %.3f %.3f\n", adcs_state.gyr[0],
+//		 adcs_state.gyr[1], adcs_state.gyr[2]);
+
+//    LOG_UART_DBG(&huart2, "%.3f %.3f %.3f %.3f %.3f\n", adcs_state.v_sun[0],
+//		 adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3],
+//		 adcs_state.v_sun[4], adcs_state.v_sun[5]);
+//
+//    LOG_UART_DBG(&huart2, "%.5f %.5f \n", adcs_state.long_sun, adcs_state.lat_sun);\
+//    HAL_Delay(100);
 
     /* USER CODE END WHILE */
 
@@ -300,7 +307,8 @@ main (void)
 
 }
 
-/** System Clock Configuration **/
+/** System Clock Configuration
+ */
 void
 SystemClock_Config (void)
 {
@@ -313,24 +321,25 @@ SystemClock_Config (void)
 
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = 16;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI
+      | RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 192;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 6;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
   HAL_RCC_OscConfig (&RCC_OscInitStruct);
 
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
       | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
-  HAL_RCC_ClockConfig (&RCC_ClkInitStruct, FLASH_LATENCY_0);
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  HAL_RCC_ClockConfig (&RCC_ClkInitStruct, FLASH_LATENCY_5);
 
   HAL_SYSTICK_Config (HAL_RCC_GetHCLKFreq () / 1000);
 
@@ -368,6 +377,18 @@ MX_I2C2_Init (void)
 
 }
 
+/* IWDG init function */
+void
+MX_IWDG_Init (void)
+{
+
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_256;
+  hiwdg.Init.Reload = 4095;
+  HAL_IWDG_Init (&hiwdg);
+
+}
+
 /* SDIO init function */
 void
 MX_SDIO_SD_Init (void)
@@ -396,7 +417,7 @@ MX_SPI1_Init (void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -468,7 +489,7 @@ MX_TIM4_Init (void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 0;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 0xA0;
+  htim4.Init.Period = 0;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   HAL_TIM_PWM_Init (&htim4);
 
@@ -479,7 +500,7 @@ MX_TIM4_Init (void)
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_1);
 
   HAL_TIM_PWM_ConfigChannel (&htim4, &sConfigOC, TIM_CHANNEL_2);

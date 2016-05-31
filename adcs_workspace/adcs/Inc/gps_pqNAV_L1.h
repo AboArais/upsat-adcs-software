@@ -8,6 +8,8 @@
 #ifndef INC_GPS_PQNAV_L1_H_
 #define INC_GPS_PQNAV_L1_H_
 
+#include "stm32f4xx_hal.h"
+
 #include "services.h"
 
 //#include "adcs.h"

@@ -169,6 +169,8 @@ void
 init_adt7420 (volatile _adcs_state *state);
 void
 init_sun_sensor (volatile _adcs_state *state);
+void
+calib_lsm9ds0_gyro (volatile _adcs_state *state);
 
 /* Update ADCS state */
 void
