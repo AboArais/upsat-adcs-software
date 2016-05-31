@@ -6,7 +6,6 @@
  */
 
 #include "gps_pqNAV_L1.h"
-#include "stm32f4xx_hal.h"
 
 static uint8_t gps[GPS_TEMP_BUFF][GPS_BUF_SIZE];
 static uint8_t gps_flag[GPS_TEMP_BUFF] = {false};
@@ -83,7 +82,7 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
     //reset buffers & pointers
     //start timeout
   }
-  else if (c == '\n') {
+  else if (c == 0x0A) {
     *huart->pRxBuffPtr++ = c;
     huart->RxXferCount--;
 
@@ -91,7 +90,7 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
 
     huart->pRxBuffPtr = &gps[gps_pointer];
     gps_flag[gps_pointer] = true;
-    if(++gps_pointer < GPS_TEMP_BUFF) { gps_pointer = 0; }
+    if(++gps_pointer > GPS_TEMP_BUFF) { gps_pointer = 0; }
     huart->RxXferCount = huart->RxXferSize;
 
     //__HAL_UART_DISABLE_IT(huart, UART_IT_RXNE);

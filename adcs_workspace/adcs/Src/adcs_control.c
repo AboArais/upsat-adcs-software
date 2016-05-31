@@ -6,10 +6,13 @@
  */
 
 #include "adcs_control.h"
+#include "log.h"
 
 extern I2C_HandleTypeDef hi2c2;
 extern CRC_HandleTypeDef hcrc;
 extern TIM_HandleTypeDef htim4;
+
+extern UART_HandleTypeDef huart2;
 
 void
 init_magneto_torquer (volatile _adcs_actuator *actuator)
@@ -87,10 +90,11 @@ void
 update_spin_torquer (volatile _adcs_actuator *actuator)
 {
   uint8_t sendbuf[16];
+  uint8_t getbuf[16];
 
   /* Hardware Calculation or CRC */
   uint32_t cbuf[3] =
-    { actuator->flag, actuator->RPM, actuator->rampTime };
+    { actuator->flag, RPM2CNT(actuator->RPM), actuator->rampTime };
   actuator->crc = HAL_CRC_Calculate (&hcrc, cbuf, 3);
 
   sendbuf[3] = (actuator->flag >> 24) & 0x000000FF;
@@ -98,10 +102,10 @@ update_spin_torquer (volatile _adcs_actuator *actuator)
   sendbuf[1] = (actuator->flag >> 8) & 0x000000FF;
   sendbuf[0] = (actuator->flag) & 0x000000FF;
 
-  sendbuf[7] = (actuator->RPM >> 24) & 0x000000FF;
-  sendbuf[6] = (actuator->RPM >> 16) & 0x000000FF;
-  sendbuf[5] = (actuator->RPM >> 8) & 0x000000FF;
-  sendbuf[4] = (actuator->RPM) & 0x000000FF;
+  sendbuf[7] = (RPM2CNT(actuator->RPM) >> 24) & 0x000000FF;
+  sendbuf[6] = (RPM2CNT(actuator->RPM) >> 16) & 0x000000FF;
+  sendbuf[5] = (RPM2CNT(actuator->RPM) >> 8) & 0x000000FF;
+  sendbuf[4] = (RPM2CNT(actuator->RPM)) & 0x000000FF;
 
   sendbuf[11] = (actuator->rampTime >> 24) & 0x000000FF;
   sendbuf[10] = (actuator->rampTime >> 16) & 0x000000FF;
@@ -114,9 +118,34 @@ update_spin_torquer (volatile _adcs_actuator *actuator)
   sendbuf[12] = (actuator->crc) & 0x000000FF;
 
   if (HAL_I2C_Mem_Write (&hi2c2, SPIN_ID, sendbuf[0], 1, &sendbuf[1], 15,
-			 SPIN_TIMEOUT) != HAL_OK) {
+  SPIN_TIMEOUT) != HAL_OK) {
     ; /* ERROR */
   }
+  getbuf[0] = 0;
+  getbuf[1] = 0;
+  getbuf[2] = 0;
+  getbuf[3] = 0;
+  getbuf[4] = 0;
+  getbuf[5] = 0;
+  getbuf[6] = 0;
+  getbuf[7] = 0;
+  getbuf[8] = 0;
+  getbuf[9] = 0;
+  getbuf[10] = 0;
+  getbuf[11] = 0;
+  getbuf[12] = 0;
+  getbuf[13] = 0;
+  getbuf[14] = 0;
+  getbuf[15] = 0;
 
-  actuator->m_RPM = actuator->RPM; /* Take from spin torquer the real RMP's */
+  if (HAL_I2C_Mem_Read (&hi2c2, SPIN_ID, sendbuf[0], 1, &getbuf, 15,
+  SPIN_TIMEOUT) != HAL_OK) {
+    ;/* ERROR */
+  }
+  actuator->m_RPM = getbuf[8] << 24;
+  actuator->m_RPM |= getbuf[7] << 16;
+  actuator->m_RPM |= getbuf[6] << 8;
+  actuator->m_RPM |= getbuf[5] << 0;
+  actuator->m_RPM = CNT2RPM(actuator->m_RPM);
+  actuator->flag = getbuf[1];
 }

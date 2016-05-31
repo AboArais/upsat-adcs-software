@@ -7,9 +7,12 @@
 
 #include "adcs_state.h"
 #include "sun_sensor_coeff.h"
+#include "log.h"
 
 extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
+
+extern UART_HandleTypeDef huart2;
 
 void
 adcs_switch (_switch_state switch_state, _adcs_switch adcs_switch,
@@ -56,11 +59,11 @@ void
 update_sens (volatile _adcs_state *state)
 {
   /* Update gyro values */
-  update_lsm9ds0 (state);
+  //update_lsm9ds0 (state);
   /* Update RM3100 values */
-  update_rm3100 (state);
+  //update_rm3100 (state);
   /* Update ADT7420 values */
-  update_adt7420 (state);
+  //update_adt7420 (state);
   /* Update sun sensor values */
   update_sun_sensor (state);
 }
@@ -229,10 +232,6 @@ init_lsm9ds0 (volatile _adcs_state *state)
   state->calib_gyr[0] = 0;
   state->calib_gyr[1] = 0;
   state->calib_gyr[2] = 0;
-  /* Set offset */
-  state->calib_gyr[0] = GYRO_OFFSET_X;
-  state->calib_gyr[1] = GYRO_OFFSET_Y;
-  state->calib_gyr[2] = GYRO_OFFSET_Z;
   HAL_I2C_Mem_Read (&hi2c2, (GYRO_ADDR << 1), WHO_AM_I_G | GYRO_MASK, 1,
 		    i2c_temp, 1, GYRO_TIMEOUT);
   if (i2c_temp[0] != GYRO_ID) {
@@ -240,8 +239,32 @@ init_lsm9ds0 (volatile _adcs_state *state)
   }
   uint8_t GyroCTRreg[5] =
     { 0b01111111, 0b00100101, 0b00000000, 0b10010000, 0b00000000 };
-  HAL_I2C_Mem_Write (&hi2c2, (GYRO_ADDR << 1), CTRL_REG1_G | GYRO_MASK, 1,
-		     GyroCTRreg, 5, GYRO_TIMEOUT);
+  if (HAL_I2C_Mem_Write (&hi2c2, (GYRO_ADDR << 1), CTRL_REG1_G | GYRO_MASK, 1,
+			 GyroCTRreg, 5, GYRO_TIMEOUT) != HAL_OK) {
+    ;/* ERROR */
+  }
+  /* Set offset */
+  calib_lsm9ds0_gyro (state);
+}
+
+void
+calib_lsm9ds0_gyro (volatile _adcs_state *state)
+{
+#define N 100
+  int i = N, d, cnt;
+  cnt = 0;
+
+  while (i--) {
+    update_lsm9ds0 (state);
+    cnt++;
+    for (d = 0; d < 3; d++) {
+      state->calib_gyr[d] += (float) state->gyr_raw[d];
+      HAL_Delay (10);
+    }
+  }
+  for (d = 0; d < 3; d++) {
+    state->calib_gyr[d] /= (float) cnt;
+  }
 }
 
 /* Get ID and set the Cycle Count Registers */
@@ -442,8 +465,11 @@ update_lsm9ds0 (volatile _adcs_state *state)
 {
   int i;
   /* IMU, Gyro measure */
-  HAL_I2C_Mem_Read (&hi2c2, (GYRO_ADDR << 1), GYRO_VAL | GYRO_MASK, 1,
-		    (uint8_t *) state->gyr_raw, 6, GYRO_TIMEOUT);
+  if (HAL_I2C_Mem_Read (&hi2c2, (GYRO_ADDR << 1), GYRO_VAL | GYRO_MASK, 1,
+			(uint8_t *) state->gyr_raw, 6, GYRO_TIMEOUT)
+      != HAL_OK) {
+    ;
+  }
   /* Handle return of I2C */
   for (i = 0; i < 3; i++) {
     state->gyr[i] = ((float) state->gyr_raw[i] - state->calib_gyr[i]) * 17.5
@@ -558,8 +584,8 @@ update_ad7682 (uint8_t ch)
   HAL_Delay (6);
   HAL_GPIO_WritePin (CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
   HAL_Delay (1);
-  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 5, AD7682_TIMEOUT);
-  HAL_Delay (1);
+  HAL_SPI_TransmitReceive (&hspi1, spi_in_temp, spi_out_temp, 5,
+  AD7682_TIMEOUT);
 
   if ((spi_out_temp[2] == AD7682_CFG | AD7682_INCC | ch | AD7682_BW)
       & (spi_out_temp[3] == AD7682_REF | AD7682_SEQ | AD7682_RB)) {
@@ -567,7 +593,7 @@ update_ad7682 (uint8_t ch)
     v |= spi_out_temp[1];
   }
   else {
-    ;
+    LOG_UART_ERROR(&huart2, "ERROR\n");;
   }
   return v;
 }

@@ -13,7 +13,15 @@
 /* Spin Torquer */
 #define SPIN_ID 	0x03
 #define SPIN_TIMEOUT	1000
-#define MAX_RPM		10000
+#define MAX_RPM		40000
+#define CNT2RPM(x)	48000000*15/(x)
+#define RPM2CNT(x)	CNT2RPM(x)
+// MOTOR In sync to bridge pulses, but not locked  yet to reference RPM
+#define MOTOR_INSYNC 	1
+// MOTOR In Synchronous mode to  reference RPM
+#define MOTOR_LOCKED 	2
+// MOTOR stalled (that is bad, unless RPMr <100)
+#define MOTOR_STALL  	3
 
 /* Set Up PWM Start up Duty-Cycle */
 #define MAGNETO_TORQUER_PERIOD		65535	/* 4095.9375 Hz */
