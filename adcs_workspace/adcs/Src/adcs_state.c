@@ -59,11 +59,11 @@ void
 update_sens (volatile _adcs_state *state)
 {
   /* Update gyro values */
-  //update_lsm9ds0 (state);
+  update_lsm9ds0 (state);
   /* Update RM3100 values */
-  //update_rm3100 (state);
+  update_rm3100 (state);
   /* Update ADT7420 values */
-  //update_adt7420 (state);
+  update_adt7420 (state);
   /* Update sun sensor values */
   update_sun_sensor (state);
 }
@@ -327,8 +327,10 @@ init_adt7420 (volatile _adcs_state *state)
   /* Set operation mode */
   i2c_temp[0] = ADT7420_16BIT | ADT7420_OP_MODE_1_SPS;
   i2c_temp[1] = 0x00;
-  HAL_I2C_Mem_Write (&hi2c2, ( ADT7420_ADDRESS << 1), ADT7420_REG_CONFIG, 1,
-		     i2c_temp, 1, ADT7420_TIMEOUT);
+  if (HAL_I2C_Mem_Write (&hi2c2, ( ADT7420_ADDRESS << 1), ADT7420_REG_CONFIG, 1,
+			 i2c_temp, 1, ADT7420_TIMEOUT) != HAL_OK) {
+    ;/* error */
+  }
 }
 
 /* Init sun sensor */

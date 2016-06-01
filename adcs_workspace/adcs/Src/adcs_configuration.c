@@ -25,5 +25,4 @@ void kick_TIM7_timed_interrupt(uint32_t control_loop) {
 
   /* Kick timer interrupt for timed threads */
   HAL_TIM_Base_Start_IT(&htim7);
-
 }

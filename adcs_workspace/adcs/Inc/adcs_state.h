@@ -57,7 +57,7 @@
 #define STATUS_MASK	0x80	/* To get status of data ready */
 #define PNI_CyclesMSB	0x00
 #define PNI_CyclesLSB	0xC8
-#define PNI_GAIN	75/1e6	/* Sensitivity LSB/uT */
+#define PNI_GAIN	1e3/75	/* 75/1e6 Sensitivity LSB/uT to convert nT 1e3/75 */
 #define PNI_TIMEOUT	1000
 
 /* ADT7420 address, IC2*/

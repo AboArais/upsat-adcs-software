@@ -53,14 +53,14 @@ update_magneto_torquer (volatile _adcs_actuator *actuator)
   if (actuator->current_x >= 0) {
     actuator->duty_cycle_x = actuator->current_x * MAGNETO_TORQUER_RESISTANCE
 	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
-    htim4.Instance->CCR3 = actuator->duty_cycle_x;
-    htim4.Instance->CCR4 = MAGNETO_TORQUER_PERIOD;
+    htim4.Instance->CCR1 = actuator->duty_cycle_x;
+    htim4.Instance->CCR2 = 0;
   }
   else if (actuator->current_x < 0) {
     actuator->duty_cycle_x = -actuator->current_x * MAGNETO_TORQUER_RESISTANCE
 	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
-    htim4.Instance->CCR3 = MAGNETO_TORQUER_PERIOD;
-    htim4.Instance->CCR4 = actuator->duty_cycle_x;
+    htim4.Instance->CCR1 = 0;
+    htim4.Instance->CCR2 = actuator->duty_cycle_x;
   }
   else {
     /* error */
@@ -73,12 +73,12 @@ update_magneto_torquer (volatile _adcs_actuator *actuator)
     actuator->duty_cycle_y = actuator->current_y * MAGNETO_TORQUER_RESISTANCE
 	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
     htim4.Instance->CCR3 = actuator->duty_cycle_y;
-    htim4.Instance->CCR4 = MAGNETO_TORQUER_PERIOD;
+    htim4.Instance->CCR4 = 0;
   }
   else if (actuator->current_y < 0) {
     actuator->duty_cycle_y = -actuator->current_y * MAGNETO_TORQUER_RESISTANCE
 	* MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
-    htim4.Instance->CCR3 = MAGNETO_TORQUER_PERIOD;
+    htim4.Instance->CCR3 = 0;
     htim4.Instance->CCR4 = actuator->duty_cycle_y;
   }
   else {

@@ -69,6 +69,7 @@ DMA_HandleTypeDef hdma_usart2_tx;
 uint8_t uart_temp[500];
 _adcs_state adcs_state;
 _adcs_actuator adcs_actuator;
+uint8_t dbg_msg = 0;
 
 #pragma location = 0x0800C000
 const uint32_t key[(16 * 1000) / 4];
@@ -158,9 +159,9 @@ main (void)
   adcs_switch (SWITCH_ON, GPS, &adcs_state);
 
   /* GPS delay */
-//  HAL_Delay(30000);
+  //HAL_Delay(30000);
   init_sens (&adcs_state);
-//  init_magneto_torquer (&adcs_actuator);
+  init_magneto_torquer (&adcs_actuator);
   gps_init (adcs_state.gps_buf);
 
   /* ecss */
@@ -170,6 +171,8 @@ main (void)
   pkt_pool_INIT ();
   uint16_t size = 0;
   event_crt_pkt_api (uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
+  HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+  event_dbg_api (uart_temp, "ADCS STARTED\n", &size);
   HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
   HAL_UART_Receive_IT (&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
 
@@ -207,7 +210,15 @@ main (void)
 
   uint8_t gps_cnt = 0;
   uint8_t gps_flag = 0;
-  uint8_t *test_buf;
+  uint8_t *gps_buf;
+  uint8_t test_buf[100];
+
+  adcs_actuator.RPM = 10;
+  adcs_actuator.rampTime = 0;
+  adcs_actuator.current_x = 0;
+  adcs_actuator.current_y = 0;
+
+  //flash_write_trasmit(0xffaf0f6412);
 
   /* USER CODE END 2 */
 
@@ -216,87 +227,87 @@ main (void)
   while (1) {
 
     import_pkt (OBC_APP_ID, &adcs_data.obc_uart);
-    /* Update ADCS */
-    update_sens (&adcs_state);
-    /* Send GPS sentences to OBC */
-    for (gps_cnt = 0; gps_cnt < 15; gps_cnt++) {
-      test_buf = get_gps_buff (gps_cnt, &gps_flag);
 
-      if (gps_flag == 1) {
-	reset_gps_flag (gps_cnt);
-//	LOG_UART_DBG(&huart2, "%s\n", test_buf);
-//	LOG_UART_DBG(&huart2, "%d\n", gps_cnt);
+    update_spin_torquer (&adcs_actuator);
+    update_magneto_torquer (&adcs_actuator);
+
+    /* ADCS tests */
+    switch (dbg_msg)
+      {
+      case 0:
+	break;
+      case 1:
+	snprintf (test_buf, 100, "m %.3f %.3f %.3f\n", adcs_state.rm_mag[0],
+		  adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
+	event_dbg_api (uart_temp, test_buf, &size);
+	HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	break;
+      case 2:
+	snprintf (test_buf, 100, "g %.3f %.3f %.3f\n", adcs_state.gyr[0],
+		  adcs_state.gyr[1], adcs_state.gyr[2]);
+	event_dbg_api (uart_temp, test_buf, &size);
+	HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	break;
+      case 3:
+	snprintf (test_buf, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
+		  adcs_state.v_sun[0], adcs_state.v_sun[1], adcs_state.v_sun[2],
+		  adcs_state.v_sun[3], adcs_state.v_sun[4],
+		  adcs_state.v_sun[5]);
+	event_dbg_api (uart_temp, test_buf, &size);
+	HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	break;
+      case 4:
+	snprintf (test_buf, 100, "l %.3f %.3f\n", adcs_state.long_sun,
+		  adcs_state.lat_sun);
+	event_dbg_api (uart_temp, test_buf, &size);
+	HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	break;
+      case 5:
+	snprintf (test_buf, 100, "s %d, %d\n", adcs_actuator.m_RPM,
+		  adcs_actuator.flag);
+	event_dbg_api (uart_temp, test_buf, &size);
+	HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	break;
+      case 6:
+	snprintf (test_buf, 100, "t %.3f\n", adcs_state.temp_c);
+	event_dbg_api (uart_temp, test_buf, &size);
+	HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	break;
+      case 8:
+	for (gps_cnt = 0; gps_cnt < 10; gps_cnt++) {
+	  gps_buf = get_gps_buff (gps_cnt, &gps_flag);
+
+	  if (gps_flag == 1) {
+	    reset_gps_flag (gps_cnt);
+	    size = 0;
+	    event_dbg_api (uart_temp, gps_buf, &size);
+	    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+	    HAL_Delay (10);
+	  }
+	}
+	break;
+      default:
+	break;
       }
+    HAL_Delay (100);
+
+    /* CubeSat propagator */
+    LOG_UART_FILE(&huart2, "%.5f \t", adcs_state.jd);
+
+    update_sgdp4 (&adcs_state);
+    update_geomag (&adcs_state);
+    update_sun_pos (&adcs_state);
+    if (tleup == 1) {
+      calculate_tle (&adcs_state);
+      update_tle (&adcs_state);
+      tleup = 0;
     }
 
-//    LOG_UART_FILE(&huart2, "%.5f \t", adcs_state.jd);
-//    update_sgdp4 (&adcs_state);
-//    update_geomag (&adcs_state);
-//    update_sun_pos (&adcs_state);
-//    if (tleup == 1) {
-//      calculate_tle (&adcs_state);
-//      update_tle (&adcs_state);
-//      tleup = 0;
-//    }
-    /* ADCS tests */
-//    snprintf (test_buf, 100, "%.3f %.3f %.3f\n", adcs_state.rm_mag[0],
-//	      adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
-//    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
-//    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
+    /* Update ADCS state */
+    update_sens (&adcs_state);
 
-//    snprintf (test_buf, 100, "%.3f %.3f %.3f\n", adcs_state.gyr[0],
-//	      adcs_state.gyr[1], adcs_state.gyr[2]);
-//    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
-//    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-//    snprintf (test_buf, 100, "%.3f %.3f %.3f %.3f %.3f\n", adcs_state.v_sun[0],
-//	      adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3],
-//	      adcs_state.v_sun[4], adcs_state.v_sun[5]);
-//    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
-//    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-
-//    snprintf (test_buf, 100, "%.3f %.3f\n", adcs_state.long_sun,
-//	      adcs_state.lat_sun);
-//    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
-//    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-
-//    snprintf (test_buf, 100, "%d\n", adcs_actuator.m_RPM);
-//    event_crt_pkt_api (uart_temp, &test_buf, 666, 666, "", &size, SATR_OK);
-//    HAL_uart_tx (DBG_APP_ID, (uint8_t *) uart_temp, size);
-
-    // Test negative RMPs
-    adcs_actuator.RPM = 10;
-    adcs_actuator.rampTime = 0;
-    adcs_actuator.current_x = 37;
-    adcs_actuator.current_y = 37;
-    update_spin_torquer (&adcs_actuator);
-//    update_magneto_torquer (&adcs_actuator);
-
-//    LOG_UART_FILE(&huart2, "%.3f\t %.3f\t %.3f\n", adcs_state.mag_ECEF.Xm,
-//		  adcs_state.mag_ECEF.Ym, adcs_state.mag_ECEF.Zm)
-//
-//    LOG_UART_DBG(&huart2, "ECI: %.3f %.3f %.3f", adcs_state.p_ECI.x,
-//		 adcs_state.p_ECI.y, adcs_state.p_ECI.z);
-//
-//    LOG_UART_DBG(&huart2, "SUN ECI: %.5f %.5f %.5f", adcs_state.p_sun_ECI[0],
-//		 adcs_state.p_sun_ECI[1], adcs_state.p_sun_ECI[2]);
-
-//    LOG_UART_DBG(&huart2, "TEMP: %.3f", adcs_state.temp_c);
-
-//    LOG_UART_FILE(&huart2, "%.3f %.3f %.3f\n", adcs_state.rm_mag[0],
-//		  adcs_state.rm_mag[1], adcs_state.rm_mag[2]);
-
-//    LOG_UART_DBG(&huart2, "%d\n", adcs_actuator.m_RPM);
-//    LOG_UART_DBG(&huart2, "%d\n", adcs_actuator.flag);
-
-//    LOG_UART_DBG(&huart2, "GYRO: %.3f %.3f %.3f\n", adcs_state.gyr[0],
-//		 adcs_state.gyr[1], adcs_state.gyr[2]);
-
-//    LOG_UART_DBG(&huart2, "%.3f %.3f %.3f %.3f %.3f\n", adcs_state.v_sun[0],
-//		 adcs_state.v_sun[1], adcs_state.v_sun[2], adcs_state.v_sun[3],
-//		 adcs_state.v_sun[4], adcs_state.v_sun[5]);
-//
-//    LOG_UART_DBG(&huart2, "%.5f %.5f \n", adcs_state.long_sun, adcs_state.lat_sun);\
-//    HAL_Delay(100);
+    LOG_UART_FILE(&huart2, "%.3f \t %.3f \t %.3f \n", adcs_state.p_ECEF_LLH.alt,
+		  adcs_state.p_ECEF_LLH.lat, adcs_state.p_ECEF_LLH.lon);
 
     /* USER CODE END WHILE */
 
@@ -438,7 +449,7 @@ MX_SPI2_Init (void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

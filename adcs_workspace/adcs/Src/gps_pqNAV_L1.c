@@ -8,7 +8,8 @@
 #include "gps_pqNAV_L1.h"
 
 static uint8_t gps[GPS_TEMP_BUFF][GPS_BUF_SIZE];
-static uint8_t gps_flag[GPS_TEMP_BUFF] = {false};
+static uint8_t gps_flag[GPS_TEMP_BUFF] =
+  { false };
 static uint8_t gps_pointer = 0;
 
 extern UART_HandleTypeDef huart4;
@@ -89,7 +90,9 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
     *huart->pRxBuffPtr++ = 0;
 
     gps_flag[gps_pointer] = true;
-    if(++gps_pointer < GPS_TEMP_BUFF) { gps_pointer = 0; }
+    if (++gps_pointer < GPS_TEMP_BUFF) {
+      gps_pointer = 0;
+    }
     huart->pRxBuffPtr = &gps[gps_pointer];
 
     huart->RxXferCount = huart->RxXferSize;
@@ -108,21 +111,23 @@ UART_GPS_Receive_IT (UART_HandleTypeDef *huart)
     huart->RxXferCount--;
   }
 
-  if (huart->RxXferCount == 0U) // errror
-  {
-        uart->pRxBuffPtr = &gps[gps_pointer];
-        huart->RxXferCount = huart->RxXferSize;
-
+  if (huart->RxXferCount == 0U) { // errror
+    huart->pRxBuffPtr = &gps[gps_pointer];
+    huart->RxXferCount = huart->RxXferSize;
   }
 
 }
 
-void reset_gps_flag (const uint8_t i) {
+void
+reset_gps_flag (const uint8_t i)
+{
 
   gps_flag[i] = false;
 }
 
-uint8_t * get_gps_buff (const uint8_t i, uint8_t *flag) {
+uint8_t *
+get_gps_buff (const uint8_t i, uint8_t *flag)
+{
 
   *flag = gps_flag[i];
   return gps[i];
