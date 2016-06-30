@@ -119,12 +119,14 @@ typedef struct {
 typedef struct {
 	int16_t gyr_raw[3];
 	int16_t gyr_raw_filt[3];
+	float gyr_norm[3];
 	float gyr[3];
 	float calib_gyr[3];
 	_adcs_sensor_status gyr_status;
 
 	int16_t xm_raw[3];
 	int16_t xm_raw_filt[3];
+	float xm_norm[3];
 	float xm[3];
 	_adcs_sensor_status xm_status;
 } _lsm9ds0_sensor;
@@ -132,6 +134,7 @@ typedef struct {
 typedef struct {
 	int32_t rm_raw[3];
 	int32_t rm_raw_filt[3];
+	float rm_norm[3];
 	float rm_mag[3];
 	_adcs_sensor_status rm_status;
 } _rm3100_magn_sensor;
@@ -154,9 +157,6 @@ typedef struct {
 } _adcs_sensors;
 
 extern _adcs_sensors adcs_sensors;
-
-void init_sens(_adcs_sensors *sensors);
-void update_sens(_adcs_sensors *sensors);
 
 void init_lsm9ds0_gyro(_adcs_sensors *sensors);
 void calib_lsm9ds0_gyro(_adcs_sensors *sensors);

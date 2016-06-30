@@ -8,9 +8,8 @@
 #include "stm32f4xx_hal.h"
 
 #include "adcs_sensors.h"
+#include "adcs_frame.h"
 #include <math.h>
-#include "log.h"
-UART_HandleTypeDef huart2;
 
 extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
@@ -39,60 +38,6 @@ static float SUN_SENSOR_Q[6][6] = { { -1.38461, 5.03967e-2, -1.81857e-3,
 		-5.32212e-8, 1.35780e-9, 0, 0 }, { 1.77366E-6, -5.65011e-8, 5.00120e-10,
 		0, 0, 0 }, { -1.49555e-9, -3.97058e-11, 0, 0, 0, 0 }, { -9.13224e-12, 0,
 		0, 0, 0, 0 } };
-
-void init_sens(_adcs_sensors *sensors) {
-	/* Initialize IMU LSM9DS0 */
-	init_lsm9ds0_gyro(sensors);
-	/* Set offset */
-//	calib_lsm9ds0_gyro(sensors);
-	/* Initialize IMU LSM9DS0 magnetometer */
-	init_lsm9ds0_xm(sensors);
-	/* Initialize Magnetometer */
-	init_rm3100(sensors);
-	/* Initialize ADT7420 */
-	init_adt7420(sensors);
-	/* Initialize sun sensor */
-	init_sun_sensor(sensors);
-}
-
-void update_sens(_adcs_sensors *sensors) {
-	uint8_t i = 0;
-
-	int16_t prev_gyr_raw[3] = { 0, 0, 0 };
-	int32_t prev_rm_raw[3] = { 0, 0, 0 };
-
-	/* Update LSM9DS0 magnetometer */
-	update_lsm9ds0_xm(sensors);
-
-//	for (i = 0; i < N_FILTER; i++) {
-	/* Update gyroscope values and convert to Body frame*/
-	update_lsm9ds0_gyro(sensors);
-//		if ( == DEVICE_NORMAL) {
-//			for (uint8_t cnt = 0; cnt < 3; cnt++) {
-//				adcs_sensors->lsm9ds0_sensor.gyr_raw_filt[cnt] = A_FILTER
-//						* adcs_sensors->lsm9ds0_sensor.gyr_raw[cnt]
-//						+ (1 - A_FILTER) * prev_gyr_raw[cnt];
-//				prev_gyr_raw[cnt] =
-//						adcs_sensors->lsm9ds0_sensor.gyr_raw_filt[cnt];
-//			}
-//		}
-	/* Update RM3100 values and convert to Body frame*/
-	update_rm3100(sensors);
-//		if ( == DEVICE_NORMAL) {
-//			for (uint8_t cnt = 0; cnt < 3; cnt++) {
-//				adcs_sensors->magn_sensor.rm_raw_filt[cnt] = A_FILTER
-//						* adcs_sensors->magn_sensor.rm_raw[cnt]
-//						+ (1 - A_FILTER) * prev_rm_raw[cnt];
-//				prev_rm_raw[cnt] = adcs_sensors->magn_sensor.rm_raw_filt[cnt];
-//			}
-//		}
-//	}
-
-	/* Update ADT7420 values */
-	update_adt7420(sensors);
-	/* Update sun sensor values and convert to Body frame*/
-	update_sun_sensor(sensors);
-}
 
 /* Initialize LSM9DS0 for gyroscope */
 void init_lsm9ds0_gyro(_adcs_sensors *sensors) {
@@ -156,10 +101,7 @@ void calib_lsm9ds0_gyro(_adcs_sensors *sensors) {
 
 /* Update values for lsm9ds0 gyroscope */
 void update_lsm9ds0_gyro(_adcs_sensors *sensors) {
-	uint8_t i;
-	sensors->lsm9ds0_sensor.gyr_raw[0] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw[1] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw[2] = 0;
+
 	/* IMU, Gyroscope measure */
 	if (HAL_I2C_Mem_Read(&hi2c2, (GYRO_ADDR << 1), GYRO_VAL | LSM9DS0_MASK, 1,
 			(uint8_t *) sensors->lsm9ds0_sensor.gyr_raw, 6,
@@ -170,11 +112,12 @@ void update_lsm9ds0_gyro(_adcs_sensors *sensors) {
 
 	sensors->lsm9ds0_sensor.gyr_status = DEVICE_NORMAL;
 
-	for (i = 0; i < 3; i++) {
-		sensors->lsm9ds0_sensor.gyr[i] =
-				((float) sensors->lsm9ds0_sensor.gyr_raw[i]
-						- sensors->lsm9ds0_sensor.calib_gyr[i]) * GYRO_GAIN;
-	}
+	sensors->lsm9ds0_sensor.gyr[0] = ((float) sensors->lsm9ds0_sensor.gyr_raw[0]
+			- sensors->lsm9ds0_sensor.calib_gyr[0]) * GYRO_GAIN;
+	sensors->lsm9ds0_sensor.gyr[1] = ((float) sensors->lsm9ds0_sensor.gyr_raw[1]
+			- sensors->lsm9ds0_sensor.calib_gyr[1]) * GYRO_GAIN;
+	sensors->lsm9ds0_sensor.gyr[2] = ((float) sensors->lsm9ds0_sensor.gyr_raw[2]
+			- sensors->lsm9ds0_sensor.calib_gyr[2]) * GYRO_GAIN;
 }
 
 /* Initialize LSM9DS0 for magnetometer */
@@ -216,9 +159,9 @@ void init_lsm9ds0_xm(_adcs_sensors *sensors) {
 
 /* Update values for lsm9ds0 magnetometer*/
 void update_lsm9ds0_xm(_adcs_sensors *sensors) {
-	sensors->lsm9ds0_sensor.xm_raw[0] = 0;
-	sensors->lsm9ds0_sensor.xm_raw[1] = 0;
-	sensors->lsm9ds0_sensor.xm_raw[2] = 0;
+
+	float tmp_norm = 0;
+
 	/* IMU, Magnetometer measure */
 	if (HAL_I2C_Mem_Read(&hi2c2, (XM_ADDR << 1), XM_VAL | LSM9DS0_MASK, 1,
 			(uint8_t *) sensors->lsm9ds0_sensor.xm_raw, 6, LSM9DS0_TIMEOUT)
@@ -229,14 +172,23 @@ void update_lsm9ds0_xm(_adcs_sensors *sensors) {
 
 	sensors->lsm9ds0_sensor.xm_status = DEVICE_NORMAL;
 
+	tmp_norm = (float) norm(sensors->lsm9ds0_sensor.xm_raw[0],
+			sensors->lsm9ds0_sensor.xm_raw[1],
+			sensors->lsm9ds0_sensor.xm_raw[2]);
+
+	sensors->lsm9ds0_sensor.xm_norm[0] = sensors->lsm9ds0_sensor.xm_raw[0]
+			/ tmp_norm;
+	sensors->lsm9ds0_sensor.xm_norm[1] = sensors->lsm9ds0_sensor.xm_raw[1]
+			/ tmp_norm;
+	sensors->lsm9ds0_sensor.xm_norm[2] = -sensors->lsm9ds0_sensor.xm_raw[2]
+			/ tmp_norm;
+
 	sensors->lsm9ds0_sensor.xm[0] = (float) sensors->lsm9ds0_sensor.xm_raw[0]
 			* XM_GAIN;
 	sensors->lsm9ds0_sensor.xm[1] = (float) sensors->lsm9ds0_sensor.xm_raw[1]
 			* XM_GAIN;
 	sensors->lsm9ds0_sensor.xm[2] = -(float) sensors->lsm9ds0_sensor.xm_raw[2]
 			* XM_GAIN;
-
-	return;
 
 }
 
@@ -291,6 +243,7 @@ void update_rm3100(_adcs_sensors *sensors) {
 	uint8_t spi_in_temp[10];
 	uint8_t spi_out_temp[10];
 	int32_t tmp = 0;
+	float tmp_norm = 0;
 	char *ptr;
 
 	/* Write POLL 0x00 register and followed 0x70 */
@@ -343,8 +296,6 @@ void update_rm3100(_adcs_sensors *sensors) {
 	*ptr-- = spi_out_temp[2];
 	*ptr-- = spi_out_temp[3];
 	sensors->magn_sensor.rm_raw[0] = tmp >> 8;
-	sensors->magn_sensor.rm_mag[0] = (float) sensors->magn_sensor.rm_raw[0]
-			* PNI_GAIN;
 	/* Y Axis */
 	ptr = (char*) (&tmp);
 	ptr = ptr + 3;
@@ -352,8 +303,6 @@ void update_rm3100(_adcs_sensors *sensors) {
 	*ptr-- = spi_out_temp[5];
 	*ptr-- = spi_out_temp[6];
 	sensors->magn_sensor.rm_raw[1] = tmp >> 8;
-	sensors->magn_sensor.rm_mag[1] = (float) sensors->magn_sensor.rm_raw[1]
-			* PNI_GAIN;
 	/* Z Axis */
 	ptr = (char*) (&tmp);
 	ptr = ptr + 3;
@@ -361,6 +310,18 @@ void update_rm3100(_adcs_sensors *sensors) {
 	*ptr-- = spi_out_temp[8];
 	*ptr-- = spi_out_temp[9];
 	sensors->magn_sensor.rm_raw[2] = tmp >> 8;
+
+	tmp_norm = (float) norm(sensors->magn_sensor.rm_raw[0],
+			sensors->magn_sensor.rm_raw[1], sensors->magn_sensor.rm_raw[2]);
+
+	sensors->magn_sensor.rm_norm[0] = sensors->magn_sensor.rm_raw[0] / tmp_norm;
+	sensors->magn_sensor.rm_norm[1] = sensors->magn_sensor.rm_raw[1] / tmp_norm;
+	sensors->magn_sensor.rm_norm[2] = sensors->magn_sensor.rm_raw[2] / tmp_norm;
+
+	sensors->magn_sensor.rm_mag[0] = (float) sensors->magn_sensor.rm_raw[0]
+			* PNI_GAIN;
+	sensors->magn_sensor.rm_mag[1] = (float) sensors->magn_sensor.rm_raw[1]
+			* PNI_GAIN;
 	sensors->magn_sensor.rm_mag[2] = (float) sensors->magn_sensor.rm_raw[2]
 			* PNI_GAIN;
 
@@ -386,7 +347,7 @@ void init_adt7420(_adcs_sensors *sensors) {
 		sensors->temp_sensor.temp_status = DEVICE_ERROR;
 		return;
 	}
-	HAL_Delay(10);
+	HAL_Delay(10); // ?????????????????????????????????????
 	/* Set operation mode */
 	i2c_temp[0] = ADT7420_16BIT | ADT7420_OP_MODE_1_SPS;
 	i2c_temp[1] = 0x00;
@@ -421,6 +382,7 @@ void update_adt7420(_adcs_sensors *sensors) {
 	lsb = i2c_temp[0];
 	sensors->temp_sensor.temp_raw = msb << 8;
 	sensors->temp_sensor.temp_raw |= lsb;
+
 	if ((sensors->temp_sensor.temp_raw >> 15 & 1) == 0) {
 		sensors->temp_sensor.temp_c = (float) sensors->temp_sensor.temp_raw
 				/ 128;
@@ -577,6 +539,7 @@ void update_sun_sensor(_adcs_sensors *sensors) {
 							* sensors->sun_sensor.lat_rough;
 				}
 			}
+			// Convert to XYZ with alt = 1
 		}
 	} else {
 		sensors->sun_sensor.sun_status = DEVICE_DISABLE;

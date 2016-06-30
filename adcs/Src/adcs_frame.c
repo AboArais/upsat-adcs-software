@@ -29,6 +29,28 @@ void ECI2ECEF(double jd, xyz_t from, xyz_t *to) {
 
 }
 
+void ECI2NED(xyz_t from, xyz_t *to, double w, double i, double u) {
+
+	double R[3][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
+
+	R[0][0] = -sin(u) * sin(w) * cos(i) + cos(u) * cos(w);
+	R[0][1] = sin(u) * cos(i) * cos(w) + sin(w) * cos(u);
+	R[0][2] = sin(i) * sin(u);
+
+	R[1][0] = -sin(u) * cos(w) - sin(w) * cos(i) * cos(u);
+	R[1][1] = -sin(u) * sin(w) + cos(i) * cos(u) * cos(w);
+	R[1][2] = sin(i) * cos(u);
+
+	R[2][0] = sin(i) * sin(w);
+	R[2][1] = -sin(i) * cos(w);
+	R[2][2] = cos(i);
+
+	to->x = R[1][0] * from.x + R[1][1] * from.y + R[1][2] * from.z; // Y
+	to->y = -(R[2][0] * from.x + R[2][1] * from.y + R[2][2] * from.z); // -Z
+	to->z = -(R[0][0] * from.x + R[0][1] * from.y + R[0][2] * from.z); // -X
+
+}
+
 void cart2spher(xyz_t from, llh_t *to) {
 
 	/* Cartesian to Spherical in deg and km from earth center */
@@ -41,10 +63,17 @@ void cart2spher(xyz_t from, llh_t *to) {
 
 }
 
-void ECI2NED(xyz_t from, xyz_t *to, double w, double i, double u) {
+void spher2cart(llh_t from, xyz_t *to) {
 
-	;
+	// phi -> lon, th -> lat
+	to->x = from.alt*sin(RAD(from.lat))*cos(RAD(from.lon));
+	to->y = from.alt*sin(RAD(from.lat))*sin(RAD(from.lon));
+	to->z = from.alt*cos(RAD(from.lat));
 
+}
+
+double norm(double x1, double x2, double x3) {
+	return sqrt(x1*x1+x2*x2+x3*x3);
 }
 
 /*

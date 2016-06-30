@@ -20,9 +20,12 @@ typedef struct {
 	double alt;
 } llh_t;
 
+void WGS842ECEF();
 void ECI2ECEF(double jd, xyz_t from, xyz_t *to);
 void ECI2NED(xyz_t from, xyz_t *to, double w, double i, double u);
 void cart2spher(xyz_t from, llh_t *to);
 void spher2cart(llh_t from, xyz_t *to);
+
+double norm(double x1, double x2, double x3);
 
 #endif /* INC_ADCS_FRAME_H_ */
