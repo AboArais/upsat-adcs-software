@@ -37,7 +37,7 @@
 
 #include "adcs_configuration.h"
 #include "adcs_sensors.h"
-//#include "adcs_gps.h"
+#include "adcs_gps.h"
 #include "adcs_actuators.h"
 #include "adcs_switch.h"
 #include "adcs_time.h"
@@ -47,9 +47,9 @@
 #include "geomag.h"
 #include "sun_pos.h"
 
-//#include "adcs.h"
-//#include "service_utilities.h"
-//#include "time_management_service.h"
+#include "adcs.h"
+#include "service_utilities.h"
+#include "time_management_service.h"
 
 #include "log.h"
 
@@ -122,9 +122,9 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 //  Normalize sensor values with norm
 //  Change magnetometers compare norm
 //  Add moving average filter in sensors
-//  Tune time out of all devices
+//  Tune time-out of all devices
 //  Convert WGS-84(GPS) to ECEF
-//  Convert reference vectors to orbit frame (ECI to NED)
+//  Convert reference vectors to orbit frame (ECI to NED) ok
 //  Convert measurement vectors to body frame (Sun to xyz)
 //  Calculate rotation matrix
 //  Convert UTC to JD ok
@@ -179,14 +179,19 @@ int main(void) {
 	HAL_Delay(10);
 	adcs_pwr_switch(SWITCH_ON, GPS);
 	/* Initialize sensors */
-	init_sens(&adcs_sensors);
+	init_lsm9ds0_gyro(&adcs_sensors);
+	calib_lsm9ds0_gyro(&adcs_sensors);
+	init_lsm9ds0_xm(&adcs_sensors);
+	init_rm3100(&adcs_sensors);
+	init_adt7420(&adcs_sensors);
+	init_sun_sensor(&adcs_sensors);
 
 	/* Initialize GPS */
-//	uint8_t gps_cnt = 0;
-//	uint8_t gps_flag = 0;
-//	uint8_t *gps_buf;
-//	uint8_t test_buf[100];
-//	gps_init(gps_buf);
+	uint8_t gps_cnt = 0;
+	uint8_t gps_flag = 0;
+	uint8_t *gps_buf;
+	uint8_t test_buf[100];
+	gps_init(gps_buf);
 
 	/* Initialize actuators */
 	init_spin_torquer(&adcs_actuator);
@@ -224,26 +229,27 @@ int main(void) {
 
 	/* Initialize Sun position model */
 	init_sun(&sun_vector);
-	xyz_t p_sun_ned;
-	p_sun_ned.x = 0;
-	p_sun_ned.y = 0;
-	p_sun_ned.z = 0;
+	xyz_t sun_ned_vector;
+	sun_ned_vector.x = 0;
+	sun_ned_vector.y = 0;
+	sun_ned_vector.z = 0;
+
+	double tmp_norm = 0;
 
 	/* ecss */
-//	uint8_t rsrc = 0;
-//	HAL_reset_source(&rsrc);
-//	set_reset_source(rsrc);
-//	pkt_pool_INIT();
-//	uint16_t size = 0;
-//	event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
-//	HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//	event_dbg_api(uart_temp, "ADCS STARTED\n", &size);
-//	HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//	HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
-	/* Get time from OBC */
-//	 tc_tm_pkt  *test_pkt = 0;
-//	 time_management_request_time(&test_pkt, OBC_APP_ID);
+	uint8_t rsrc = 0;
+	HAL_reset_source(&rsrc);
+	set_reset_source(rsrc);
+	pkt_pool_INIT();
+	uint16_t size = 0;
+	event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
+	HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+	event_dbg_api(uart_temp, "ADCS STARTED\n", &size);
+	HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+	HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
 
+	/* Get time from OBC */
+//	time_management_request_time_in_utc(OBC_APP_ID);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -252,7 +258,9 @@ int main(void) {
 
 		t0_stamp = HAL_GetTick();
 
-//		import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
+		import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
+
+		HAL_Delay(100);
 
 		/* Get time */
 		adcs_time.year = 2016;
@@ -265,17 +273,11 @@ int main(void) {
 		julday(&adcs_time);
 
 		/* Calculate measurement vectors */
-		update_sens(&adcs_sensors);
-		LOG_UART_FILE(&huart2, "%d \t", adcs_sensors.lsm9ds0_sensor.xm_raw[0]);
-		LOG_UART_FILE(&huart2, "%d \t", adcs_sensors.lsm9ds0_sensor.xm_raw[1]);
-		LOG_UART_FILE(&huart2, "%d \n", adcs_sensors.lsm9ds0_sensor.xm_raw[2]);
-		LOG_UART_FILE(&huart2, "%d \t", adcs_sensors.lsm9ds0_sensor.gyr_raw[0]);
-		LOG_UART_FILE(&huart2, "%d \t", adcs_sensors.lsm9ds0_sensor.gyr_raw[1]);
-		LOG_UART_FILE(&huart2, "%d \n", adcs_sensors.lsm9ds0_sensor.gyr_raw[2]);
-		LOG_UART_FILE(&huart2, "%ld \t", adcs_sensors.magn_sensor.rm_raw[0]);
-		LOG_UART_FILE(&huart2, "%ld \t", adcs_sensors.magn_sensor.rm_raw[1]);
-		LOG_UART_FILE(&huart2, "%ld \n", adcs_sensors.magn_sensor.rm_raw[2]);
-		LOG_UART_FILE(&huart2, "%.2f \n", adcs_sensors.temp_sensor.temp_c);
+		update_lsm9ds0_gyro(&adcs_sensors);
+		update_rm3100(&adcs_sensors);
+		update_lsm9ds0_xm(&adcs_sensors);
+		update_adt7420(&adcs_sensors);
+		update_sun_sensor(&adcs_sensors);
 
 		/* Set actuators */
 		update_spin_torquer(&adcs_actuator);
@@ -292,11 +294,19 @@ int main(void) {
 		igrf_vector.longitude = p_ecef_llh.lon;
 		igrf_vector.alt = p_ecef_llh.alt;
 		geomag(&igrf_vector); // Return igrf status, Xm,Ym,Zm in NED
+		tmp_norm = norm(igrf_vector.Xm, igrf_vector.Ym, igrf_vector.Zm);
+		igrf_vector.Xm = igrf_vector.Xm / tmp_norm;
+		igrf_vector.Ym = igrf_vector.Ym / tmp_norm;
+		igrf_vector.Zm = igrf_vector.Zm / tmp_norm;
 
 		sun_vector.JD_epoch = adcs_time.jd;
 		sun(&sun_vector); // Sun position in ECI
-		ECI2NED(sun_vector.sun_pos, &p_sun_ned, upsat_tle.ascn, upsat_tle.eqinc,
-				upsat_tle.argp + upsat_tle.mnan); // Convert to NED
+		ECI2NED(sun_vector.sun_pos, &sun_ned_vector, upsat_tle.ascn,
+				upsat_tle.eqinc, upsat_tle.argp + upsat_tle.mnan); // Convert to NED
+		tmp_norm = norm(sun_ned_vector.x, sun_ned_vector.y, sun_ned_vector.z);
+		sun_ned_vector.x = sun_ned_vector.x / tmp_norm;
+		sun_ned_vector.y = sun_ned_vector.y / tmp_norm;
+		sun_ned_vector.z = sun_ned_vector.z / tmp_norm;
 
 		/* Attitude determination */
 
@@ -307,7 +317,6 @@ int main(void) {
 		/* Add software error handler */
 
 		t1_stamp = HAL_GetTick() - t0_stamp; // ms
-		LOG_UART_FILE(&huart2, "%d \n\n", t1_stamp);
 
 		/* ADCS Debug mode */
 //		switch (dbg_msg) {
@@ -376,7 +385,6 @@ int main(void) {
 //		default:
 //			break;
 //		}
-
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -394,8 +402,7 @@ void SystemClock_Config(void) {
 	RCC_ClkInitTypeDef RCC_ClkInitStruct;
 	RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
 
-	__HAL_RCC_PWR_CLK_ENABLE()
-	;
+	__HAL_RCC_PWR_CLK_ENABLE();
 
 	__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
@@ -499,7 +506,8 @@ void MX_RTC_Init(void) {
 
 	/**Enable the WakeUp
 	 */
-	// HAL_RTCEx_SetWakeUpTimer(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
+//	HAL_RTCEx_SetWakeUpTimer(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16);
+
 }
 
 /* SPI1 init function */
@@ -654,8 +662,7 @@ void MX_USART2_UART_Init(void) {
  */
 void MX_DMA_Init(void) {
 	/* DMA controller clock enable */
-	__HAL_RCC_DMA1_CLK_ENABLE()
-	;
+	__HAL_RCC_DMA1_CLK_ENABLE();
 
 	/* DMA interrupt init */
 	/* DMA1_Stream6_IRQn interrupt configuration */
@@ -678,16 +685,11 @@ void MX_GPIO_Init(void) {
 	GPIO_InitTypeDef GPIO_InitStruct;
 
 	/* GPIO Ports Clock Enable */
-	__HAL_RCC_GPIOC_CLK_ENABLE()
-	;
-	__HAL_RCC_GPIOH_CLK_ENABLE()
-	;
-	__HAL_RCC_GPIOA_CLK_ENABLE()
-	;
-	__HAL_RCC_GPIOB_CLK_ENABLE()
-	;
-	__HAL_RCC_GPIOD_CLK_ENABLE()
-	;
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOH_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
 
 	/*Configure GPIO pins : PC13 PC0 PC1 PC2
 	 PC3 PC4 PC5 PC6
@@ -740,14 +742,20 @@ void MX_GPIO_Init(void) {
 	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOA, GPS_EN_Pin | RM_CS_Pin | FM_nCE_Pin | FM_nWP_Pin,
-			GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPS_EN_GPIO_Port, GPS_EN_Pin, GPIO_PIN_SET);
 
 	/*Configure GPIO pin Output Level */
-	HAL_GPIO_WritePin(GPIOB, SENS_EN_Pin | FM_nHLD_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(SENS_EN_GPIO_Port, SENS_EN_Pin, GPIO_PIN_SET);
+
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(FM_nHLD_GPIO_Port, FM_nHLD_Pin, GPIO_PIN_RESET);
 
 	/*Configure GPIO pin Output Level */
 	HAL_GPIO_WritePin(CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
+
+	/*Configure GPIO pin Output Level */
+	HAL_GPIO_WritePin(GPIOA, RM_CS_Pin | FM_nCE_Pin | FM_nWP_Pin,
+			GPIO_PIN_RESET);
 
 }
 

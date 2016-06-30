@@ -4,7 +4,7 @@ LibFiles=Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_crc.h;Drivers/STM32F4xx_
 [PreviousGenFiles]
 HeaderPath=/home/azisi/Documents/UPSat/upsat-adcs-software/adcs/Inc
 SourcePath=/home/azisi/Documents/UPSat/upsat-adcs-software/adcs/Src
-SourceFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;mxconstants.h;stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;
+SourceFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;mxconstants.h;stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;stm32f4xx_hal_timebase_TIM.c;
 HeaderFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;mxconstants.h;
 
 [PreviousUsedRideFiles]
