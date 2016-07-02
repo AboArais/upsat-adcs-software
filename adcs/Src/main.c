@@ -50,6 +50,7 @@
 #include "adcs.h"
 #include "service_utilities.h"
 #include "time_management_service.h"
+#include "event_reporting_service.h"
 
 #include "log.h"
 
@@ -78,6 +79,8 @@ DMA_HandleTypeDef hdma_usart2_tx;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
+uint8_t uart_temp[500];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,6 +105,8 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
+void adcs_debug();
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -110,40 +115,39 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 //  Read/Write TLE in stm-flash or external flash
 //  GPS sentences parser
 //  Time stamps for GPS (on-off to update TLE-Time)
+//
 //  Add limits to measurement vectors in raw values
-//  Add other state to sensors available, not available ok
+//  Add other state to sensors available, not available
 //  Temperature compensate in gyroscope
 //  Temperature compensate in magnetometer
+//  New limits to temperature sensor
 //  Cancel soft and hard iron effects in magnetometer
 //  Comment gyroscope offset calculation and add as definitions
 //  Add second magnetometer for back-up
-//  Normalize sensor values with norm
-//  Change magnetometers compare norm
+//  Normalize sensor values
+//  Change magnetometers by comparing normalize values
 //  Add moving average filter in sensors
 //  Tune time-out of all devices
-//  Convert WGS-84(GPS) to ECEF
-//  Convert reference vectors to orbit frame (ECI to NED) ok
 //  Convert measurement vectors to body frame (Sun to xyz)
+//
+//  Convert WGS-84(GPS) to ECEF
+//
 //  Calculate rotation matrix
-//  Convert UTC to JD ok
-//  Convert UTC to TLE epoch ok
+//
 //  Add controller
-//  Refactor, sgp4, igrf, adcs_<..> ok
+//
 //  Software error handling
-//  Hardware error handling
-//  Read TLE from OBC serial ok
-//  Get time from OBC at the start or after reset ok
-//  Send to OBC rotation matrix and ECI position ok
+//  Read TLE from OBC serial
+//  Get time from OBC at the start or after reset
 //  Send to OBC time from GPS
 //  Read/Write to OBC sensors values, controller gains
 //  Send notification to OBC for critical events
+
 /* USER CODE END 0 */
 
 int main(void) {
 
 	/* USER CODE BEGIN 1 */
-
-	uint8_t uart_temp[500];
 
 	/* USER CODE END 1 */
 
@@ -174,9 +178,11 @@ int main(void) {
 
 	/* Kick timer interrupt for timed threads */
 //	kick_TIM7_timed_interrupt(TIMED_EVENT_PERIOD);
+
 	/* Switch ON sensors-GPS */
 	adcs_pwr_switch(SWITCH_ON, SENSORS);
 	adcs_pwr_switch(SWITCH_ON, GPS);
+
 	/* Initialize sensors */
 	init_lsm9ds0_gyro(&adcs_sensors);
 	calib_lsm9ds0_gyro(&adcs_sensors);
@@ -186,10 +192,7 @@ int main(void) {
 	init_sun_sensor(&adcs_sensors);
 
 	/* Initialize GPS */
-	uint8_t gps_cnt = 0;
-	uint8_t gps_flag = 0;
 	uint8_t *gps_buf;
-	uint8_t test_buf[100];
 	gps_init(gps_buf);
 
 	/* Initialize actuators */
@@ -202,38 +205,26 @@ int main(void) {
 
 	/* Initialize SGP4 and TLE read */
 	orbit_t temp_tle;
-	sprintf(tle_string,
-			"1 25544U 98067A   16137.55001157  .00005721  00000-0  91983-4 0  9991\n2 25544  51.6440 215.8562 0001995 108.3968  92.4187 15.54614828    61");
+	sprintf(tle_string, "1 25544U 98067A   16137.55001157  .00005721  00000-0  91983-4 0  9991\n2 25544  51.6440 215.8562 0001995 108.3968  92.4187 15.54614828    61");
 	temp_tle = read_tle(tle_string);
-	if (update_tle(&upsat_tle, temp_tle) != TLE_NORMAL) {
-		LOG_UART_FILE(&huart2, "TLE error \n");
-	}
-	p_eci.x = 0;
-	p_eci.y = 0;
-	p_eci.z = 0;
-	v_eci.x = 0;
-	v_eci.y = 0;
-	v_eci.y = 0;
+	update_tle(&upsat_tle, temp_tle);
+	p_eci.x = 0; p_eci.y = 0; p_eci.z = 0;
+	v_eci.x = 0; v_eci.y = 0; v_eci.y = 0;
 
 	/* Initialize IGRF model */
 	xyz_t p_ecef;
 	llh_t p_ecef_llh;
-	p_ecef.x = 0;
-	p_ecef.y = 0;
-	p_ecef.z = 0;
-	p_ecef_llh.lat = 0;
-	p_ecef_llh.lon = 0;
-	p_ecef_llh.alt = 0;
+	p_ecef.x = 0; p_ecef.y = 0; p_ecef.z = 0;
+	p_ecef_llh.lat = 0; p_ecef_llh.lon = 0; p_ecef_llh.alt = 0;
 	init_geomag(&igrf_vector);
 
 	/* Initialize Sun position model */
 	init_sun(&sun_vector);
 	xyz_t sun_ned_vector;
-	sun_ned_vector.x = 0;
-	sun_ned_vector.y = 0;
-	sun_ned_vector.z = 0;
+	sun_ned_vector.x = 0; sun_ned_vector.y = 0; sun_ned_vector.z = 0;
 
 	double tmp_norm = 0;
+
 	/* ecss */
 	uint8_t rsrc = 0;
 	HAL_reset_source(&rsrc);
@@ -248,6 +239,18 @@ int main(void) {
 
 	/* Get time from OBC */
 //	time_management_request_time_in_utc(OBC_APP_ID);
+	struct time_utc adcs_utc;
+	adcs_utc.year = 17;
+	adcs_utc.month = 7;
+	adcs_utc.day = 2;
+	adcs_utc.hour = 20;
+	adcs_utc.min = 30;
+	adcs_utc.sec = 0;
+	set_time_UTC(adcs_utc);
+
+	/* Refresh WDC timer */
+	HAL_IWDG_Refresh(&hiwdg);
+
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -255,19 +258,17 @@ int main(void) {
 	while (1) {
 
 		t0_stamp = HAL_GetTick();
-		LOG_UART_FILE(&huart2, "TLE error \n");
 
 		import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
 
-		HAL_Delay(100);
-
-		/* Get time */
-		adcs_time.year = 2016;
-		adcs_time.month = 6;
-		adcs_time.day = 24;
-		adcs_time.hours = 14;
-		adcs_time.min = 30;
-		adcs_time.sec = 30;
+		/* Get time for RTC*/
+		get_time_UTC(&adcs_utc);
+		adcs_time.year = 2000+adcs_utc.year;
+		adcs_time.month = adcs_utc.month;
+		adcs_time.day = adcs_utc.day;
+		adcs_time.hours = adcs_utc.hour;
+		adcs_time.min = adcs_utc.min;
+		adcs_time.sec = adcs_utc.sec;
 		decyear(&adcs_time);
 		julday(&adcs_time);
 
@@ -315,75 +316,13 @@ int main(void) {
 
 		/* Add software error handler */
 
+		/* Refresh WDC timer */
+		HAL_IWDG_Refresh(&hiwdg);
+
 		t1_stamp = HAL_GetTick() - t0_stamp; // ms
 
 		/* ADCS Debug mode */
-//		switch (dbg_msg) {
-//		case 0:
-//			break;
-//		case 1:
-//			snprintf(test_buf, 100, "m %.3f %.3f %.3f\n",
-//					adcs_sensors.magn_sensor.rm_mag[0],
-//					adcs_sensors.magn_sensor.rm_mag[1],
-//					adcs_sensors.magn_sensor.rm_mag[2]);
-//			event_dbg_api(uart_temp, test_buf, &size);
-//			HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//			break;
-//		case 2:
-//			snprintf(test_buf, 100, "g %.3f %.3f %.3f\n",
-//					adcs_sensors.lsm9ds0_sensor.gyr[0],
-//					adcs_sensors.lsm9ds0_sensor.gyr[1],
-//					adcs_sensors.lsm9ds0_sensor.gyr[2]);
-//			event_dbg_api(uart_temp, test_buf, &size);
-//			HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//			break;
-//		case 3:
-//			snprintf(test_buf, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
-//					adcs_sensors.sun_sensor.v_sun[0],
-//					adcs_sensors.sun_sensor.v_sun[1],
-//					adcs_sensors.sun_sensor.v_sun[2],
-//					adcs_sensors.sun_sensor.v_sun[3],
-//					adcs_sensors.sun_sensor.v_sun[4],
-//					adcs_sensors.sun_sensor.v_sun[5]);
-//			event_dbg_api(uart_temp, test_buf, &size);
-//			HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//			break;
-//		case 4:
-//			snprintf(test_buf, 100, "l %.3f %.3f\n",
-//					adcs_sensors.sun_sensor.long_sun,
-//					adcs_sensors.sun_sensor.lat_sun);
-//			event_dbg_api(uart_temp, test_buf, &size);
-//			HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//			break;
-//		case 5:
-//			snprintf(test_buf, 100, "s %d, %d\n",
-//					adcs_actuator.spin_torquer.m_RPM,
-//					adcs_actuator.spin_torquer.status);
-//			event_dbg_api(uart_temp, test_buf, &size);
-//			HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//			break;
-//		case 6:
-//			snprintf(test_buf, 100, "t %.3f\n",
-//					adcs_sensors.temp_sensor.temp_c);
-//			event_dbg_api(uart_temp, test_buf, &size);
-//			HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//			break;
-//		case 8:
-//			for (gps_cnt = 0; gps_cnt < 10; gps_cnt++) {
-//				gps_buf = get_gps_buff(gps_cnt, &gps_flag);
-//
-//				if (gps_flag == 1) {
-//					reset_gps_flag(gps_cnt);
-//					size = 0;
-//					event_dbg_api(uart_temp, gps_buf, &size);
-//					HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-//					HAL_Delay(10);
-//				}
-//			}
-//			break;
-//		default:
-//			break;
-//		}
+
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -508,25 +447,25 @@ static void MX_RTC_Init(void) {
 	sTime.Seconds = 0;
 	sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 	sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
-		Error_Handler();
-	}
+//	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
+//		Error_Handler();
+//	}
 
 	sDate.WeekDay = RTC_WEEKDAY_MONDAY;
 	sDate.Month = RTC_MONTH_JANUARY;
 	sDate.Date = 1;
 	sDate.Year = 0;
 
-	if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
-		Error_Handler();
-	}
+//	if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
+//		Error_Handler();
+//	}
 
 	/**Enable the WakeUp
 	 */
-	if (HAL_RTCEx_SetWakeUpTimer(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16)
-			!= HAL_OK) {
-		Error_Handler();
-	}
+//	if (HAL_RTCEx_SetWakeUpTimer(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16)
+//			!= HAL_OK) {
+//		Error_Handler();
+//	}
 
 }
 
@@ -789,6 +728,80 @@ static void MX_GPIO_Init(void) {
 }
 
 /* USER CODE BEGIN 4 */
+
+void adcs_debug() {
+
+	uint8_t test_buf[100];
+	uint16_t size = 0;
+	uint8_t *gps_buf;
+	uint8_t gps_cnt = 0;
+	uint8_t gps_flag = 0;
+
+	switch (dbg_msg) {
+	case 0:
+		break;
+	case 1:
+		snprintf(test_buf, 100, "m %.3f %.3f %.3f\n",
+				adcs_sensors.magn_sensor.rm_mag[0],
+				adcs_sensors.magn_sensor.rm_mag[1],
+				adcs_sensors.magn_sensor.rm_mag[2]);
+		event_dbg_api(uart_temp, test_buf, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 2:
+		snprintf(test_buf, 100, "g %.3f %.3f %.3f\n",
+				adcs_sensors.lsm9ds0_sensor.gyr[0],
+				adcs_sensors.lsm9ds0_sensor.gyr[1],
+				adcs_sensors.lsm9ds0_sensor.gyr[2]);
+		event_dbg_api(uart_temp, test_buf, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 3:
+		snprintf(test_buf, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
+				adcs_sensors.sun_sensor.v_sun[0],
+				adcs_sensors.sun_sensor.v_sun[1],
+				adcs_sensors.sun_sensor.v_sun[2],
+				adcs_sensors.sun_sensor.v_sun[3],
+				adcs_sensors.sun_sensor.v_sun[4],
+				adcs_sensors.sun_sensor.v_sun[5]);
+		event_dbg_api(uart_temp, test_buf, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 4:
+		snprintf(test_buf, 100, "l %.3f %.3f\n",
+				adcs_sensors.sun_sensor.long_sun,
+				adcs_sensors.sun_sensor.lat_sun);
+		event_dbg_api(uart_temp, test_buf, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 5:
+		snprintf(test_buf, 100, "s %d, %d\n", adcs_actuator.spin_torquer.m_RPM,
+				adcs_actuator.spin_torquer.status);
+		event_dbg_api(uart_temp, test_buf, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 6:
+		snprintf(test_buf, 100, "t %.3f\n", adcs_sensors.temp_sensor.temp_c);
+		event_dbg_api(uart_temp, test_buf, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 8:
+		for (gps_cnt = 0; gps_cnt < 10; gps_cnt++) {
+			gps_buf = get_gps_buff(gps_cnt, &gps_flag);
+
+			if (gps_flag == 1) {
+				reset_gps_flag(gps_cnt);
+				size = 0;
+				event_dbg_api(uart_temp, gps_buf, &size);
+				HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+				HAL_Delay(10);
+			}
+		}
+		break;
+	default:
+		break;
+	}
+}
 
 /* USER CODE END 4 */
 
