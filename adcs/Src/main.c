@@ -49,7 +49,6 @@
 
 #include "adcs.h"
 #include "service_utilities.h"
-#include "time_management_service.h"
 #include "event_reporting_service.h"
 
 #include "log.h"
@@ -120,7 +119,6 @@ void adcs_debug();
 //  Add other state to sensors available, not available
 //  Temperature compensate in gyroscope
 //  Temperature compensate in magnetometer
-//  New limits to temperature sensor
 //  Cancel soft and hard iron effects in magnetometer
 //  Comment gyroscope offset calculation and add as definitions
 //  Add second magnetometer for back-up
@@ -205,6 +203,7 @@ int main(void) {
 
 	/* Initialize SGP4 and TLE read */
 	orbit_t temp_tle;
+	/* Read tle from flash */
 	sprintf(tle_string, "1 25544U 98067A   16137.55001157  .00005721  00000-0  91983-4 0  9991\n2 25544  51.6440 215.8562 0001995 108.3968  92.4187 15.54614828    61");
 	temp_tle = read_tle(tle_string);
 	update_tle(&upsat_tle, temp_tle);
@@ -239,14 +238,13 @@ int main(void) {
 
 	/* Get time from OBC */
 //	time_management_request_time_in_utc(OBC_APP_ID);
-	struct time_utc adcs_utc;
-	adcs_utc.year = 17;
-	adcs_utc.month = 7;
-	adcs_utc.day = 2;
-	adcs_utc.hour = 20;
-	adcs_utc.min = 30;
-	adcs_utc.sec = 0;
-	set_time_UTC(adcs_utc);
+//	adcs_time.utc.year = 16;
+//	adcs_time.utc.month = 7;
+//	adcs_time.utc.day = 2;
+//	adcs_time.utc.hour = 20;
+//	adcs_time.utc.min = 30;
+//	adcs_time.utc.sec = 0;
+//	set_time_UTC(adcs_time.utc);
 
 	/* Refresh WDC timer */
 	HAL_IWDG_Refresh(&hiwdg);
@@ -262,13 +260,8 @@ int main(void) {
 		import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
 
 		/* Get time for RTC*/
-		get_time_UTC(&adcs_utc);
-		adcs_time.year = 2000+adcs_utc.year;
-		adcs_time.month = adcs_utc.month;
-		adcs_time.day = adcs_utc.day;
-		adcs_time.hours = adcs_utc.hour;
-		adcs_time.min = adcs_utc.min;
-		adcs_time.sec = adcs_utc.sec;
+		get_time_UTC(&adcs_time.utc);
+		if (adcs_time.utc.year == 24) { adcs_time.utc.year = 16; }
 		decyear(&adcs_time);
 		julday(&adcs_time);
 
@@ -311,6 +304,8 @@ int main(void) {
 		/* Attitude determination */
 
 		/* Take GPS sentences and update TLE-Time */
+		// set adcs RTC with updated GPS time
+		// time_management_force_time_update(OBC_APP_ID);
 
 		/* Control Law */
 
@@ -322,6 +317,10 @@ int main(void) {
 		t1_stamp = HAL_GetTick() - t0_stamp; // ms
 
 		/* ADCS Debug mode */
+//		dbg_msg = 7;
+//		adcs_debug();
+
+//		HAL_Delay(1000);
 
 		/* USER CODE END WHILE */
 
@@ -447,18 +446,18 @@ static void MX_RTC_Init(void) {
 	sTime.Seconds = 0;
 	sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
 	sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-//	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
-//		Error_Handler();
-//	}
+	if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK) {
+		Error_Handler();
+	}
 
 	sDate.WeekDay = RTC_WEEKDAY_MONDAY;
 	sDate.Month = RTC_MONTH_JANUARY;
 	sDate.Date = 1;
 	sDate.Year = 0;
 
-//	if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
-//		Error_Handler();
-//	}
+	if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK) {
+		Error_Handler();
+	}
 
 	/**Enable the WakeUp
 	 */
@@ -731,58 +730,71 @@ static void MX_GPIO_Init(void) {
 
 void adcs_debug() {
 
-	uint8_t test_buf[100];
+	uint8_t test_gdb[200];
 	uint16_t size = 0;
 	uint8_t *gps_buf;
 	uint8_t gps_cnt = 0;
 	uint8_t gps_flag = 0;
+    struct time_utc utc;
+    uint32_t qb_secs;
 
 	switch (dbg_msg) {
 	case 0:
 		break;
 	case 1:
-		snprintf(test_buf, 100, "m %.3f %.3f %.3f\n",
+		snprintf(test_gdb, 100, "m %.3f %.3f %.3f\n",
 				adcs_sensors.magn_sensor.rm_mag[0],
 				adcs_sensors.magn_sensor.rm_mag[1],
 				adcs_sensors.magn_sensor.rm_mag[2]);
-		event_dbg_api(uart_temp, test_buf, &size);
+		event_dbg_api(uart_temp, test_gdb, &size);
 		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
 		break;
 	case 2:
-		snprintf(test_buf, 100, "g %.3f %.3f %.3f\n",
+		snprintf(test_gdb, 100, "g %.3f %.3f %.3f\n",
 				adcs_sensors.lsm9ds0_sensor.gyr[0],
 				adcs_sensors.lsm9ds0_sensor.gyr[1],
 				adcs_sensors.lsm9ds0_sensor.gyr[2]);
-		event_dbg_api(uart_temp, test_buf, &size);
+		event_dbg_api(uart_temp, test_gdb, &size);
 		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
 		break;
 	case 3:
-		snprintf(test_buf, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
+		snprintf(test_gdb, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
 				adcs_sensors.sun_sensor.v_sun[0],
 				adcs_sensors.sun_sensor.v_sun[1],
 				adcs_sensors.sun_sensor.v_sun[2],
 				adcs_sensors.sun_sensor.v_sun[3],
 				adcs_sensors.sun_sensor.v_sun[4],
 				adcs_sensors.sun_sensor.v_sun[5]);
-		event_dbg_api(uart_temp, test_buf, &size);
+		event_dbg_api(uart_temp, test_gdb, &size);
 		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
 		break;
 	case 4:
-		snprintf(test_buf, 100, "l %.3f %.3f\n",
+		snprintf(test_gdb, 100, "l %.3f %.3f\n",
 				adcs_sensors.sun_sensor.long_sun,
 				adcs_sensors.sun_sensor.lat_sun);
-		event_dbg_api(uart_temp, test_buf, &size);
+		event_dbg_api(uart_temp, test_gdb, &size);
 		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
 		break;
 	case 5:
-		snprintf(test_buf, 100, "s %d, %d\n", adcs_actuator.spin_torquer.m_RPM,
+		snprintf(test_gdb, 100, "s %d, %d\n", adcs_actuator.spin_torquer.m_RPM,
 				adcs_actuator.spin_torquer.status);
-		event_dbg_api(uart_temp, test_buf, &size);
+		event_dbg_api(uart_temp, test_gdb, &size);
 		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
 		break;
 	case 6:
-		snprintf(test_buf, 100, "t %.3f\n", adcs_sensors.temp_sensor.temp_c);
-		event_dbg_api(uart_temp, test_buf, &size);
+		snprintf(test_gdb, 100, "t %.3f\n", adcs_sensors.temp_sensor.temp_c);
+		event_dbg_api(uart_temp, test_gdb, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		break;
+	case 7:
+	    get_time_UTC(&utc);
+	    sprintf(test_gdb, "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n", utc.year, utc.month, utc.day, utc.hour, utc.min, utc.sec);
+		event_dbg_api(uart_temp, test_gdb, &size);
+		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+		HAL_Delay(500);
+	    get_time_QB50(&qb_secs);
+	    sprintf(test_gdb, "\nADCS QB50 TIME: %d\n", qb_secs);
+		event_dbg_api(uart_temp, test_gdb, &size);
 		HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
 		break;
 	case 8:
