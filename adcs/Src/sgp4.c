@@ -183,16 +183,13 @@ static INLINE int IPOW4(int a) {
 /* =========== Do we have sincos() functions available or not ? ======= */
 /*
  We can use the normal ANSI 'C' library functions in sincos() macros, but if
- we have sincos() functions they are much faster (25% under some tests). For
- DOS programs we use our assembly language functions using the 80387 (and
- higher) coprocessor FSINCOS instruction:
+ we have sincos() functions they are much faster (25% under some tests).
 
- void sincos(double x, double *s, double *c);
- void sincosf(float x, float *s, float *c);
-
- For the Sun 'C' compiler there is only the system supplied double precision
- version of these functions.
+ Note:
+ If we have available sincos() function we not define MACRO_SINCOS. If we
+ haven't available sincos() function we define MACROS_SINCOS.
  */
+// #define MACRO_SINCOS
 
 #ifdef MACRO_SINCOS
 #define sincos(x,s,c) {double sc__tmp=(x);\
@@ -203,29 +200,16 @@ static INLINE int IPOW4(int a) {
 		*(s)=(real)sin(sc__tmp);\
 		*(c)=(real)cos(sc__tmp);}
 
-#elif !defined( sun )
+#else
 
-/* For Microsoft C6.0 compiler, etc. */
 #ifdef SGP4_SNGL
 #define SINCOS sincosf
-#else
-#define SINCOS sincos
-#endif /* ! SGP4_SNGL */
-
-void sincos(double, double *, double *);
 void sincosf(float, float *, float *);
-
-#else
-/* Sun 'C' compiler. */
-#ifdef SGP4_SNGL
-/* Use double function and cast results to single precision. */
-#define SINCOS(x,s,c) {double s__tmp, c__tmp;\
-		sincos((double)(x), &s__tmp, &c__tmp);\
-		*(s)=(real)s__tmp;\
-		*(c)=(real)c__tmp);}
 #else
 #define SINCOS sincos
+void sincos(double, double *, double *);
 #endif /* ! SGP4_SNGL */
+
 #endif /* ! MACRO_SINCOS */
 
 /* ================= Stack space problems ? ======================== */
@@ -540,7 +524,6 @@ tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
 		tle->smjaxs = new_tle.smjaxs;
 		tle->norb = new_tle.norb;
 		tle->satno = new_tle.satno;
-		// write in flash new tle, but not here in main
 		break;
 	}
 
