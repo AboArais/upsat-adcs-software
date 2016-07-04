@@ -86,23 +86,6 @@
 					</folderInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.530377730" name="mass_storage_service.h" rcbsApplicability="disable" resourcePath="services/mass_storage_service.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1838525386" name="large_data_service.h" rcbsApplicability="disable" resourcePath="services/large_data_service.h" toolsToInvoke=""/>
-					<folderInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1997657366" name="/" resourcePath="EWARM">
-						<toolChain id="fr.ac6.managedbuild.toolchain.gnu.cross.exe.debug.754992110" name="Ac6 STM32 MCU GCC" superClass="fr.ac6.managedbuild.toolchain.gnu.cross.exe.debug" unusedChildren="">
-							<option id="fr.ac6.managedbuild.option.gnu.cross.prefix.955467143.152654706" name="Prefix" superClass="fr.ac6.managedbuild.option.gnu.cross.prefix.955467143"/>
-							<option id="fr.ac6.managedbuild.option.gnu.cross.mcu.736528695.571450616" name="Mcu" superClass="fr.ac6.managedbuild.option.gnu.cross.mcu.736528695"/>
-							<option id="fr.ac6.managedbuild.option.gnu.cross.board.799442609.1858360001" name="Board" superClass="fr.ac6.managedbuild.option.gnu.cross.board.799442609"/>
-							<option id="fr.ac6.managedbuild.option.gnu.cross.instructionSet.689093250.1218618659" name="Instruction Set" superClass="fr.ac6.managedbuild.option.gnu.cross.instructionSet.689093250"/>
-							<option id="fr.ac6.managedbuild.option.gnu.cross.fpu.2133684427.1149618899" name="Floating point hardware" superClass="fr.ac6.managedbuild.option.gnu.cross.fpu.2133684427"/>
-							<option id="fr.ac6.managedbuild.option.gnu.cross.floatabi.1391898140.1222030621" name="Floating-point ABI" superClass="fr.ac6.managedbuild.option.gnu.cross.floatabi.1391898140"/>
-							<option id="fr.ac6.managedbuild.option.gnu.cross.path.1067524833.248366067" name="Path" superClass="fr.ac6.managedbuild.option.gnu.cross.path.1067524833"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.574369646" name="MCU GCC Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.695212206"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.530324469" name="MCU G++ Compiler" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.compiler.1972868888"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.1135354666" name="MCU GCC Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.1758388029"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.1915076520" name="MCU G++ Linker" superClass="fr.ac6.managedbuild.tool.gnu.cross.cpp.linker.1448683286"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.archiver.1807038056" name="MCU GCC Archiver" superClass="fr.ac6.managedbuild.tool.gnu.archiver.1820374209"/>
-							<tool id="fr.ac6.managedbuild.tool.gnu.cross.assembler.1701297633" name="MCU GCC Assembler" superClass="fr.ac6.managedbuild.tool.gnu.cross.assembler.923416544"/>
-						</toolChain>
-					</folderInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.826070707" name="gps.h" rcbsApplicability="disable" resourcePath="core/gps.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1978178776" name="su_mnlp.h" rcbsApplicability="disable" resourcePath="core/su_mnlp.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1627787892" name="system.h" rcbsApplicability="disable" resourcePath="Inc/system.h" toolsToInvoke=""/>

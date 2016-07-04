@@ -42,6 +42,7 @@
 #include "adcs_switch.h"
 #include "adcs_time.h"
 #include "adcs_frame.h"
+#include "adcs_flash.h"
 
 #include "sgp4.h"
 #include "geomag.h"
@@ -249,6 +250,12 @@ int main(void) {
 	/* Refresh WDC timer */
 	HAL_IWDG_Refresh(&hiwdg);
 
+	/* Init for external flash */
+	uint8_t flash_tmp = 0;
+	flash_init();
+	flash_write_enable();
+	HAL_Delay(500);
+
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
@@ -258,6 +265,15 @@ int main(void) {
 		t0_stamp = HAL_GetTick();
 
 		import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
+
+		/* Test external flash */
+		flash_readID(&flash_tmp);
+
+		flash_erase_block4K(0x0);
+
+		flash_write_byte(0x35, 0x0);
+
+		flash_read_byte(&flash_tmp, 0x0);
 
 		/* Get time for RTC*/
 		get_time_UTC(&adcs_time.utc);
