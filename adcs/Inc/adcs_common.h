@@ -39,7 +39,7 @@
 /* TLE update */
 #define CD	2.3			// Drag Coefficient clear number
 #define RHO	5.75E-13	// Atmospheric Density Kg/m^3 in 400 km
-#define M	2.3			// Mass of cubesat in Kg
-#define A	0.1*0.1		// Cross-sectional effective Area m^2
+#define MASS	2.3			// Mass of cubesat in Kg
+#define AREA	0.1*0.1		// Cross-sectional effective Area m^2
 
 #endif /* INC_ADCS_COMMON_H_ */

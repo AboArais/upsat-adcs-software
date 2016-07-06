@@ -51,7 +51,7 @@
 									<listOptionValue builtIn="false" value="STM32F405xx"/>
 								</option>
 								<option id="fr.ac6.managedbuild.gnu.c.compiler.option.misc.other.1840510053" superClass="fr.ac6.managedbuild.gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-fmessage-length=0" valueType="string"/>
-								<option id="fr.ac6.managedbuid.gnu.c.compiler.option.misc.other.2138523979" name="Other flags" superClass="fr.ac6.managedbuid.gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-fmessage-length=0 -u _printf_float" valueType="string"/>
+								<option id="fr.ac6.managedbuid.gnu.c.compiler.option.misc.other.2138523979" name="Other flags" superClass="fr.ac6.managedbuid.gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-fmessage-length=0 -u _printf_float -DARM_MATH_CM4=1" valueType="string"/>
 								<option id="gnu.c.compiler.option.dialect.std.576175473" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.c99" valueType="enumerated"/>
 								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.ffunction.1836281276" name="Place the function in their own section (-ffunction-sections)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.ffunction" useByScannerDiscovery="false" value="true" valueType="boolean"/>
 								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.fdata.1051968746" name="Place the data in their own section (-fdata-sections)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.compiler.fdata" useByScannerDiscovery="false" value="true" valueType="boolean"/>
@@ -86,6 +86,7 @@
 					</folderInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.530377730" name="mass_storage_service.h" rcbsApplicability="disable" resourcePath="services/mass_storage_service.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1838525386" name="large_data_service.h" rcbsApplicability="disable" resourcePath="services/large_data_service.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.119841418" name="scheduling_service.h" rcbsApplicability="disable" resourcePath="services/scheduling_service.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.826070707" name="gps.h" rcbsApplicability="disable" resourcePath="core/gps.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1978178776" name="su_mnlp.h" rcbsApplicability="disable" resourcePath="core/su_mnlp.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1627787892" name="system.h" rcbsApplicability="disable" resourcePath="Inc/system.h" toolsToInvoke=""/>
@@ -112,7 +113,7 @@
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="adcs"/>
-						<entry excluding="gps.h|gps.c|su_mnlp.h|su_mnlp.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="core"/>
+						<entry excluding="su_mnlp.h|su_mnlp.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="core"/>
 						<entry excluding="large_data_service.c|large_data_service.h|mass_storage_service.c|mass_storage_service.h" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="services"/>
 					</sourceEntries>
 				</configuration>

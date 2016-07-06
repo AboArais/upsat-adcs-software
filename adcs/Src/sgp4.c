@@ -189,7 +189,7 @@ static INLINE int IPOW4(int a) {
  If we have available sincos() function we not define MACRO_SINCOS. If we
  haven't available sincos() function we define MACROS_SINCOS.
  */
-// #define MACRO_SINCOS
+//#define MACRO_SINCOS
 
 #ifdef MACRO_SINCOS
 #define sincos(x,s,c) {double sc__tmp=(x);\
@@ -359,7 +359,7 @@ orbit_t calculate_tle(xyz_t position, xyz_t velocity, _tle_epoch updt_tle_epoch)
 	tmp_tle.rev = sqrt(MU / (tmp_tle.smjaxs * tmp_tle.smjaxs * tmp_tle.smjaxs))
 			* SOLAR_DAY_SEC / (2 * PI); /* Mean motion, revolutions per day */
 
-	tmp_tle.bstar = EARTH_RADII * CD * RHO * A * 0.5 / M; /* Drag term .*/
+	tmp_tle.bstar = EARTH_RADII * CD * RHO * AREA * 0.5 / MASS; /* Drag term .*/
 
 	tmp_tle.ep_year = updt_tle_epoch.ep_year; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
 	tmp_tle.ep_day = updt_tle_epoch.ep_day; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
