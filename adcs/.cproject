@@ -67,7 +67,7 @@
 								<option id="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script.1374065163" name="Linker Script (-T)" superClass="fr.ac6.managedbuild.tool.gnu.cross.c.linker.script" value="../STM32F405RGTx_FLASH.ld" valueType="string"/>
 								<option id="gnu.c.link.option.libs.590975216" name="Libraries (-l)" superClass="gnu.c.link.option.libs"/>
 								<option id="gnu.c.link.option.paths.1682471338" name="Library search path (-L)" superClass="gnu.c.link.option.paths"/>
-								<option id="gnu.c.link.option.ldflags.1540146044" name="Linker flags" superClass="gnu.c.link.option.ldflags" value="-specs=nosys.specs -specs=nano.specs  -specs=rdimon.specs" valueType="string"/>
+								<option id="gnu.c.link.option.ldflags.1540146044" name="Linker flags" superClass="gnu.c.link.option.ldflags" value="-specs=nosys.specs -specs=rdimon.specs" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.733382161" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -84,13 +84,11 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.530377730" name="mass_storage_service.h" rcbsApplicability="disable" resourcePath="services/mass_storage_service.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1838525386" name="large_data_service.h" rcbsApplicability="disable" resourcePath="services/large_data_service.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.530377730" name="mass_storage_service.h" rcbsApplicability="disable" resourcePath="services/mass_storage_service.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.119841418" name="scheduling_service.h" rcbsApplicability="disable" resourcePath="services/scheduling_service.h" toolsToInvoke=""/>
-					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.826070707" name="gps.h" rcbsApplicability="disable" resourcePath="core/gps.h" toolsToInvoke=""/>
-					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1978178776" name="su_mnlp.h" rcbsApplicability="disable" resourcePath="core/su_mnlp.h" toolsToInvoke=""/>
-					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1627787892" name="system.h" rcbsApplicability="disable" resourcePath="Inc/system.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.821964091" name="geomag.h" rcbsApplicability="disable" resourcePath="Inc/geomag.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1627787892" name="system.h" rcbsApplicability="disable" resourcePath="Inc/system.h" toolsToInvoke=""/>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.2093079125" name="adcs_gps.h" rcbsApplicability="disable" resourcePath="Inc/adcs_gps.h" toolsToInvoke="">
 						<tool customBuildStep="true" id="org.eclipse.cdt.managedbuilder.ui.rcbs.864619065" name="Resource Custom Build Step">
 							<inputType id="org.eclipse.cdt.managedbuilder.ui.rcbs.inputtype.562111878" name="Resource Custom Build Step Input Type">
@@ -108,6 +106,8 @@
 						</tool>
 					</fileInfo>
 					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1793963100" name="sgp4.h" rcbsApplicability="disable" resourcePath="Inc/sgp4.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.826070707" name="gps.h" rcbsApplicability="disable" resourcePath="core/gps.h" toolsToInvoke=""/>
+					<fileInfo id="fr.ac6.managedbuild.config.gnu.cross.exe.debug.89340298.1978178776" name="su_mnlp.h" rcbsApplicability="disable" resourcePath="core/su_mnlp.h" toolsToInvoke=""/>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Inc"/>

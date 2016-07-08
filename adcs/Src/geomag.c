@@ -200,6 +200,7 @@ void init_geomag(geomag_vector *gStr) {
 	gStr->Xm = 0;
 	gStr->Ym = 0;
 	gStr->Zm = 0;
+	gStr->norm = 0;
 	gStr->decl = 0;
 	gStr->incl = 0;
 	gStr->h = 0;

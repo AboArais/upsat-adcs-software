@@ -15,6 +15,7 @@ typedef struct {
 	double Xm;
 	double Ym;
 	double Zm;
+	double norm;
 	double decl;
 	double incl;
 	double h;

@@ -13,6 +13,7 @@
 typedef struct {
 	double JD_epoch; // julian date, days from 4713 bc
 	xyz_t sun_pos;
+	double norm;
 	double rtasc;
 	double decl;
 }_sun_vector;

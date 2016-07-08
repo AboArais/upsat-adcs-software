@@ -11,6 +11,7 @@ void init_sun(_sun_vector *sStr) {
 	sStr->sun_pos.x = 0;
 	sStr->sun_pos.y = 0;
 	sStr->sun_pos.z = 0;
+	sStr->norm = 0;
 	sStr->decl = 0;
 	sStr->rtasc = 0;
 }
