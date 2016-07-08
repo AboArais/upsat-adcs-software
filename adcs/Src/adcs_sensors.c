@@ -10,6 +10,7 @@
 #include "adcs_sensors.h"
 #include "adcs_frame.h"
 #include <math.h>
+#include <string.h>
 
 extern I2C_HandleTypeDef hi2c2;
 extern SPI_HandleTypeDef hspi1;
@@ -43,18 +44,9 @@ static float SUN_SENSOR_Q[6][6] = { { -1.38461, 5.03967e-2, -1.81857e-3,
 void init_lsm9ds0_gyro(_adcs_sensors *sensors) {
 	uint8_t i2c_temp[2];
 	/* Set to 0 all state values */
-	sensors->lsm9ds0_sensor.gyr_raw[0] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw[1] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw[2] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw_filt[0] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw_filt[1] = 0;
-	sensors->lsm9ds0_sensor.gyr_raw_filt[2] = 0;
-	sensors->lsm9ds0_sensor.gyr[0] = 0;
-	sensors->lsm9ds0_sensor.gyr[1] = 0;
-	sensors->lsm9ds0_sensor.gyr[2] = 0;
-	sensors->lsm9ds0_sensor.calib_gyr[0] = 0;
-	sensors->lsm9ds0_sensor.calib_gyr[1] = 0;
-	sensors->lsm9ds0_sensor.calib_gyr[2] = 0;
+    memset(sensors->lsm9ds0_sensor.gyr_raw, 0, 3);
+    memset(sensors->lsm9ds0_sensor.gyr, 0, 3);
+    memset(sensors->lsm9ds0_sensor.calib_gyr, 0, 3);
 	sensors->lsm9ds0_sensor.gyr_status = DEVICE_NORMAL;
 
 	if (HAL_I2C_Mem_Read(&hi2c2, (GYRO_ADDR << 1), WHO_AM_I_G | LSM9DS0_MASK, 1,
@@ -124,15 +116,9 @@ void update_lsm9ds0_gyro(_adcs_sensors *sensors) {
 void init_lsm9ds0_xm(_adcs_sensors *sensors) {
 	uint8_t i2c_temp[2];
 	/* Set to 0 all state values */
-	sensors->lsm9ds0_sensor.xm_raw[0] = 0;
-	sensors->lsm9ds0_sensor.xm_raw[1] = 0;
-	sensors->lsm9ds0_sensor.xm_raw[2] = 0;
-	sensors->lsm9ds0_sensor.xm_raw_filt[0] = 0;
-	sensors->lsm9ds0_sensor.xm_raw_filt[1] = 0;
-	sensors->lsm9ds0_sensor.xm_raw_filt[2] = 0;
-	sensors->lsm9ds0_sensor.xm[0] = 0;
-	sensors->lsm9ds0_sensor.xm[1] = 0;
-	sensors->lsm9ds0_sensor.xm[2] = 0;
+    memset(sensors->lsm9ds0_sensor.xm_raw, 0, 3);
+    memset(sensors->lsm9ds0_sensor.xm, 0, 3);
+	sensors->lsm9ds0_sensor.xm_norm = 0;
 	sensors->lsm9ds0_sensor.xm_status = DEVICE_NORMAL;
 
 	if (HAL_I2C_Mem_Read(&hi2c2, (XM_ADDR << 1), WHO_AM_I_XM | LSM9DS0_MASK, 1,
@@ -160,8 +146,6 @@ void init_lsm9ds0_xm(_adcs_sensors *sensors) {
 /* Update values for lsm9ds0 magnetometer*/
 void update_lsm9ds0_xm(_adcs_sensors *sensors) {
 
-	float tmp_norm = 0;
-
 	/* IMU, Magnetometer measure */
 	if (HAL_I2C_Mem_Read(&hi2c2, (XM_ADDR << 1), XM_VAL | LSM9DS0_MASK, 1,
 			(uint8_t *) sensors->lsm9ds0_sensor.xm_raw, 6, LSM9DS0_TIMEOUT)
@@ -172,22 +156,15 @@ void update_lsm9ds0_xm(_adcs_sensors *sensors) {
 
 	sensors->lsm9ds0_sensor.xm_status = DEVICE_NORMAL;
 
-	tmp_norm = (float) norm(sensors->lsm9ds0_sensor.xm_raw[0],
+	sensors->lsm9ds0_sensor.xm_norm = (float) norm(sensors->lsm9ds0_sensor.xm_raw[0],
 			sensors->lsm9ds0_sensor.xm_raw[1],
 			sensors->lsm9ds0_sensor.xm_raw[2]);
-
-	sensors->lsm9ds0_sensor.xm_norm[0] = sensors->lsm9ds0_sensor.xm_raw[0]
-			/ tmp_norm;
-	sensors->lsm9ds0_sensor.xm_norm[1] = sensors->lsm9ds0_sensor.xm_raw[1]
-			/ tmp_norm;
-	sensors->lsm9ds0_sensor.xm_norm[2] = -sensors->lsm9ds0_sensor.xm_raw[2]
-			/ tmp_norm;
 
 	sensors->lsm9ds0_sensor.xm[0] = (float) sensors->lsm9ds0_sensor.xm_raw[0]
 			* XM_GAIN;
 	sensors->lsm9ds0_sensor.xm[1] = (float) sensors->lsm9ds0_sensor.xm_raw[1]
 			* XM_GAIN;
-	sensors->lsm9ds0_sensor.xm[2] = -(float) sensors->lsm9ds0_sensor.xm_raw[2]
+	sensors->lsm9ds0_sensor.xm[2] = (float) sensors->lsm9ds0_sensor.xm_raw[2]
 			* XM_GAIN;
 
 }
@@ -198,12 +175,9 @@ void init_rm3100(_adcs_sensors *sensors) {
 	uint8_t spi_out_temp[9];
 
 	/* Set to 0 all adcs_sensors values */
-	sensors->magn_sensor.rm_raw[0] = 0;
-	sensors->magn_sensor.rm_raw[1] = 0;
-	sensors->magn_sensor.rm_raw[2] = 0;
-	sensors->magn_sensor.rm_mag[0] = 0;
-	sensors->magn_sensor.rm_mag[1] = 0;
-	sensors->magn_sensor.rm_mag[2] = 0;
+    memset(sensors->magn_sensor.rm_raw, 0, 3);
+    memset(sensors->magn_sensor.rm_mag, 0, 3);
+	sensors->magn_sensor.rm_norm = 0;
 	sensors->magn_sensor.rm_status = DEVICE_NORMAL;
 
 	/* Get ID */
@@ -243,7 +217,6 @@ void update_rm3100(_adcs_sensors *sensors) {
 	uint8_t spi_in_temp[10];
 	uint8_t spi_out_temp[10];
 	int32_t tmp = 0;
-	float tmp_norm = 0;
 	char *ptr;
 
 	/* Write POLL 0x00 register and followed 0x70 */
@@ -258,27 +231,10 @@ void update_rm3100(_adcs_sensors *sensors) {
 	/* Wait for LOW MISO */
 	HAL_Delay(10);
 	/* Read raw data */
-	spi_in_temp[0] = PNI_MX | STATUS_MASK;
-	spi_in_temp[1] = 0x00;
-	spi_in_temp[2] = 0x00;
-	spi_in_temp[3] = 0x00;
-	spi_in_temp[4] = 0x00;
-	spi_in_temp[5] = 0x00;
-	spi_in_temp[6] = 0x00;
-	spi_in_temp[7] = 0x00;
-	spi_in_temp[8] = 0x00;
-	spi_in_temp[9] = 0x00;
+    memset(spi_in_temp, 0, 10);
+    spi_in_temp[0] = PNI_MX | STATUS_MASK;
 
-	spi_out_temp[0] = 0x00;
-	spi_out_temp[1] = 0x00;
-	spi_out_temp[2] = 0x00;
-	spi_out_temp[3] = 0x00;
-	spi_out_temp[4] = 0x00;
-	spi_out_temp[5] = 0x00;
-	spi_out_temp[6] = 0x00;
-	spi_out_temp[7] = 0x00;
-	spi_out_temp[8] = 0x00;
-	spi_out_temp[9] = 0x00;
+    memset(spi_out_temp, 0, 10);
 
 	HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_RESET);
 	if (HAL_SPI_TransmitReceive(&hspi1, spi_in_temp, spi_out_temp, 10,
@@ -311,12 +267,8 @@ void update_rm3100(_adcs_sensors *sensors) {
 	*ptr-- = spi_out_temp[9];
 	sensors->magn_sensor.rm_raw[2] = tmp >> 8;
 
-	tmp_norm = (float) norm(sensors->magn_sensor.rm_raw[0],
+	sensors->magn_sensor.rm_norm = (float) norm(sensors->magn_sensor.rm_raw[0],
 			sensors->magn_sensor.rm_raw[1], sensors->magn_sensor.rm_raw[2]);
-
-	sensors->magn_sensor.rm_norm[0] = sensors->magn_sensor.rm_raw[0] / tmp_norm;
-	sensors->magn_sensor.rm_norm[1] = sensors->magn_sensor.rm_raw[1] / tmp_norm;
-	sensors->magn_sensor.rm_norm[2] = sensors->magn_sensor.rm_raw[2] / tmp_norm;
 
 	sensors->magn_sensor.rm_mag[0] = (float) sensors->magn_sensor.rm_raw[0]
 			* PNI_GAIN;
@@ -347,7 +299,6 @@ void init_adt7420(_adcs_sensors *sensors) {
 		sensors->temp_sensor.temp_status = DEVICE_ERROR;
 		return;
 	}
-	HAL_Delay(10); // ?????????????????????????????????????
 	/* Set operation mode */
 	i2c_temp[0] = ADT7420_16BIT | ADT7420_OP_MODE_1_SPS;
 	i2c_temp[1] = 0x00;
@@ -358,7 +309,7 @@ void init_adt7420(_adcs_sensors *sensors) {
 	}
 }
 
-/* Update values for adt7420 */
+/* Update values for ADT7420 */
 void update_adt7420(_adcs_sensors *sensors) {
 	uint8_t lsb, msb;
 	uint8_t i2c_temp[2];
@@ -397,34 +348,17 @@ void update_adt7420(_adcs_sensors *sensors) {
 void init_sun_sensor(_adcs_sensors *sensors) {
 	uint8_t spi_in_tmp[4], spi_out_tmp[4];
 
-	sensors->sun_sensor.v_sun_raw[0] = 0;
-	sensors->sun_sensor.v_sun_raw[1] = 0;
-	sensors->sun_sensor.v_sun_raw[2] = 0;
-	sensors->sun_sensor.v_sun_raw[3] = 0;
-	sensors->sun_sensor.v_sun_raw[4] = 0;
+    memset(sensors->sun_sensor.v_sun_raw, 0, 4);
+    memset(sensors->sun_sensor.v_sun, 0, 4);
+    memset(sensors->sun_sensor.sun_rough, 0, 3);
+    memset(sensors->sun_sensor.sun_fine, 0, 3);
+    memset(sensors->sun_sensor.sun_xyz, 0, 3);
+    sensors->sun_sensor.sun_status = DEVICE_NORMAL;
 
-	sensors->sun_sensor.v_sun[0] = 0;
-	sensors->sun_sensor.v_sun[1] = 0;
-	sensors->sun_sensor.v_sun[2] = 0;
-	sensors->sun_sensor.v_sun[3] = 0;
-	sensors->sun_sensor.v_sun[4] = 0;
-
-	sensors->sun_sensor.long_rough = 0;
-	sensors->sun_sensor.lat_rough = 0;
-	sensors->sun_sensor.long_sun = 0;
-	sensors->sun_sensor.lat_sun = 0;
-
-	sensors->sun_sensor.sun_status = DEVICE_NORMAL;
-
-	spi_in_tmp[0] = AD7682_CFG | AD7682_INCC | AD7682_CH1 | AD7682_BW;
-	spi_in_tmp[1] = AD7682_REF | AD7682_SEQ | AD7682_RB;
-	spi_in_tmp[2] = 0x00;
-	spi_in_tmp[3] = 0x00;
-
-	spi_out_tmp[0] = 0x00;
-	spi_out_tmp[1] = 0x00;
-	spi_out_tmp[2] = 0x00;
-	spi_out_tmp[3] = 0x00;
+    memset(spi_in_tmp, 0, 4);
+    spi_in_tmp[0] = AD7682_CFG | AD7682_INCC | AD7682_CH1 | AD7682_BW;
+    spi_in_tmp[1] = AD7682_REF | AD7682_SEQ | AD7682_RB;
+    memset(spi_out_tmp, 0, 4);
 
 	HAL_GPIO_WritePin(CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
 	HAL_Delay(1);
@@ -439,7 +373,6 @@ void init_sun_sensor(_adcs_sensors *sensors) {
 	}
 
 	HAL_Delay(1);
-
 	HAL_GPIO_WritePin(CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
 	HAL_Delay(1);
 	HAL_GPIO_WritePin(CNV_GPIO_Port, CNV_Pin, GPIO_PIN_SET);
@@ -461,13 +394,20 @@ void init_sun_sensor(_adcs_sensors *sensors) {
 
 /* Update sun sensor values */
 void update_sun_sensor(_adcs_sensors *sensors) {
-	uint8_t i = 0;
-	uint8_t j = 0;
-	float long_rough_numerator = 0;
-	float long_rough_demominator = 0;
-	float lat_rough_numerator = 0;
-	float lat_rough_demominator = 0;
-	float meas_Valid = 0;
+    uint8_t i = 0;
+    uint8_t j = 0;
+    float long_rough_numerator[5] = { 0 };
+    float long_rough_demominator[5] = { 0 };
+    float lat_rough_numerator[5] = { 0 };
+    float lat_rough_demominator[5] = { 0 };
+
+    float long_rough_numerator_sum = 0;
+    float long_rough_demominator_sum = 0;
+    float lat_rough_numerator_sum = 0;
+    float lat_rough_demominator_sum = 0;
+
+    float meas_Valid = 0;
+    float sun_rough[3][5] = { { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 } };
 
 	/* AD7682 Response to n-2 channel */
 	if (update_ad7682(AD7682_CH1, &sensors->sun_sensor.v_sun_raw[3])
@@ -502,48 +442,82 @@ void update_sun_sensor(_adcs_sensors *sensors) {
 		sensors->sun_sensor.v_sun[i] = (float) sensors->sun_sensor.v_sun_raw[i]
 				* AD7682_COEF;
 	}
-	/* Measure from sun sensor only if: 4*V5 − V1 − V2 − V3 − V4 ≥ 0.7 */
-	meas_Valid = 4 * sensors->sun_sensor.v_sun[4] - sensors->sun_sensor.v_sun[0]
-			- sensors->sun_sensor.v_sun[1] - sensors->sun_sensor.v_sun[2]
-			- sensors->sun_sensor.v_sun[3];
-	if (meas_Valid >= SUN_SENSOR_VALID) {
-		sensors->sun_sensor.sun_status = DEVICE_ENABLE;
-		/* Calculate Rough Measures */
-		for (i = 0; i < 5; i++) {
-			long_rough_numerator += SUN_SENSOR_K[i]
-					* sensors->sun_sensor.v_sun[i];
-			long_rough_demominator += SUN_SENSOR_N[i]
-					* sensors->sun_sensor.v_sun[i];
-			lat_rough_numerator += SUN_SENSOR_M[i]
-					* sensors->sun_sensor.v_sun[i];
-			for (j = i; j < 5; j++) {
-				long_rough_demominator += SUN_SENSOR_I[i][j]
-						* sensors->sun_sensor.v_sun[i]
-						* sensors->sun_sensor.v_sun[j];
-			}
-		}
-		/* Calculate Rough Measures */
-		if ((long_rough_demominator != 0) & (lat_rough_demominator != 0)) {
-			sensors->sun_sensor.long_rough = atan2f(long_rough_numerator,
-					long_rough_demominator);
-			sensors->sun_sensor.lat_rough = acosf(
-					lat_rough_numerator / sqrtf(lat_rough_demominator));
-			/* Calculate Fine Measures */
-			for (i = 0; i < S_SUN_SENSOR; i++) {
-				for (j = 0; j < S_SUN_SENSOR - i; j++) {
-					sensors->sun_sensor.long_sun += SUN_SENSOR_P[i][j]
-							* sensors->sun_sensor.long_rough
-							* sensors->sun_sensor.lat_rough;
-					sensors->sun_sensor.lat_sun += SUN_SENSOR_Q[i][j]
-							* sensors->sun_sensor.long_rough
-							* sensors->sun_sensor.lat_rough;
-				}
-			}
-			// Convert to XYZ with alt = 1
-		}
-	} else {
-		sensors->sun_sensor.sun_status = DEVICE_DISABLE;
-	}
+
+    /* For Testing */
+//    sensors->sun_sensor.v_sun[4] = 3.3;
+//    sensors->sun_sensor.v_sun[3] = 3.3;
+//    sensors->sun_sensor.v_sun[2] = 1;
+//    sensors->sun_sensor.v_sun[1] = 3.3;
+//    sensors->sun_sensor.v_sun[0] = 1;
+
+    /* Measure from sun sensor only if: 4*V5 − V1 − V2 − V3 − V4 ≥ 0.7
+     * V5 is reference voltage */
+    meas_Valid = 4 * sensors->sun_sensor.v_sun[4] - sensors->sun_sensor.v_sun[0]
+            - sensors->sun_sensor.v_sun[1] - sensors->sun_sensor.v_sun[2]
+            - sensors->sun_sensor.v_sun[3];
+    if (meas_Valid >= SUN_SENSOR_VALID) {
+        sensors->sun_sensor.sun_status = DEVICE_ENABLE;
+        /* Calculate Rough numerator and demominator */
+        for (i = 0; i < 5; i++) {
+            long_rough_numerator[i] = SUN_SENSOR_K[i] * sensors->sun_sensor.v_sun[i];
+            long_rough_numerator_sum += long_rough_numerator[i];
+
+            long_rough_demominator[i] = SUN_SENSOR_N[i] * sensors->sun_sensor.v_sun[i];
+            long_rough_demominator_sum += long_rough_demominator[i];
+
+            lat_rough_numerator[i] = SUN_SENSOR_M[i] * sensors->sun_sensor.v_sun[i];
+            lat_rough_numerator_sum += lat_rough_numerator[i];
+
+            for (j = i; j < 5; j++) {
+                lat_rough_demominator[i] += SUN_SENSOR_I[i][j]
+                        * sensors->sun_sensor.v_sun[i]
+                        * sensors->sun_sensor.v_sun[j];
+            }
+            lat_rough_demominator_sum += lat_rough_demominator[i];
+
+            if ((long_rough_demominator[i] != 0) & (lat_rough_demominator[i] != 0)) {
+                sun_rough[0][i] = atan2f(long_rough_numerator[i], long_rough_demominator[i]); // Lon
+
+                sun_rough[1][i] = acosf(lat_rough_numerator[i] / sqrtf(lat_rough_demominator[i])); // Lat
+
+                sun_rough[2][i] = 1; // Alt
+
+            } else {
+                sensors->sun_sensor.sun_status = DEVICE_ERROR;
+                return;
+            }
+        }
+
+        /* Calculate Rough Measure */
+        if ((long_rough_demominator_sum != 0) & (lat_rough_demominator_sum != 0)) {
+            sensors->sun_sensor.sun_rough[0] = atan2f(long_rough_numerator_sum, long_rough_demominator_sum);
+            sensors->sun_sensor.sun_rough[1] = acosf(lat_rough_numerator_sum / sqrtf(lat_rough_demominator_sum));
+            sensors->sun_sensor.sun_rough[2] = 1;
+        } else {
+            sensors->sun_sensor.sun_status = DEVICE_ERROR;
+            return;
+        }
+
+        /* Calculate Fine Measures */
+        for (i = 0; i < S_SUN_SENSOR; i++) {
+            for (j = 0; j < S_SUN_SENSOR - i; j++) {
+                sensors->sun_sensor.sun_fine[0] += SUN_SENSOR_P[i][j]
+                        * sun_rough[0][i] * sun_rough[1][j]; // Lon
+                sensors->sun_sensor.sun_fine[1] += SUN_SENSOR_Q[i][j]
+                        * sun_rough[0][i] * sun_rough[1][j]; // Lat
+                sensors->sun_sensor.sun_fine[2] = 1; // Alt
+            }
+        }
+
+        /* Convert to XYZ */
+        sensors->sun_sensor.sun_xyz[0] = sinf(sensors->sun_sensor.sun_rough[1])
+                * cosf(sensors->sun_sensor.sun_rough[0]);
+        sensors->sun_sensor.sun_xyz[1] = sinf(sensors->sun_sensor.sun_rough[1])
+                * sinf(sensors->sun_sensor.sun_rough[0]);
+        sensors->sun_sensor.sun_xyz[2] = cosf(sensors->sun_sensor.sun_rough[1]);
+    } else {
+        sensors->sun_sensor.sun_status = DEVICE_DISABLE;
+    }
 
 }
 
@@ -551,15 +525,10 @@ void update_sun_sensor(_adcs_sensors *sensors) {
 _adcs_sensor_status update_ad7682(uint8_t ch, uint16_t *v_raw) {
 	uint8_t spi_in_temp[4], spi_out_temp[4];
 
-	spi_in_temp[0] = AD7682_CFG | AD7682_INCC | ch | AD7682_BW;
-	spi_in_temp[1] = AD7682_REF | AD7682_SEQ | AD7682_RB;
-	spi_in_temp[2] = 0x00;
-	spi_in_temp[3] = 0x00;
-
-	spi_out_temp[0] = 0x00;
-	spi_out_temp[1] = 0x00;
-	spi_out_temp[2] = 0x00;
-	spi_out_temp[3] = 0x00;
+    memset(spi_in_temp, 0, 4);
+    spi_in_temp[0] = AD7682_CFG | AD7682_INCC | ch | AD7682_BW;
+    spi_in_temp[1] = AD7682_REF | AD7682_SEQ | AD7682_RB;
+    memset(spi_out_temp, 0, 4);
 
 	HAL_GPIO_WritePin(CNV_GPIO_Port, CNV_Pin, GPIO_PIN_RESET);
 	HAL_Delay(1);
