@@ -71,21 +71,22 @@
 #include "adcs_common.h"
 
 typedef struct kep_s {
-	double theta; /* Angle "theta" from equatorial plane (rad) = U. */
-	double ascn; /* Right ascension (rad). */
-	double eqinc; /* Equatorial inclination (rad). */
-	double radius; /* Radius (km). */
-	double rdotk;
-	double rfdotk;
-	/*
-	 * Following are without short-term perturbations but used to
-	 * speed searchs.
-	 */
-	double argp; /* Argument of perigee at 'tsince' (rad). */
-	double smjaxs; /* Semi-major axis at 'tsince' (km). */
-	double ecc; /* Eccentricity at 'tsince'. */
+    double theta; /* Angle "theta" from equatorial plane (rad) = U. */
+    double ascn; /* Right ascension (rad). */
+    double eqinc; /* Equatorial inclination (rad). */
+    double radius; /* Radius (km). */
+    double rdotk;
+    double rfdotk;
+    /*
+     * Following are without short-term perturbations but used to
+     * speed searchs.
+     */
+    double argp; /* Argument of perigee at 'tsince' (rad). */
+    double smjaxs; /* Semi-major axis at 'tsince' (km). */
+    double ecc; /* Eccentricity at 'tsince'. */
 } kep_t;
 
+/* Global Variables */
 double SGP4_jd0; /* Julian Day for epoch (available to outside functions). */
 orbit_t upsat_tle;
 uint8_t tle_string[TLE_SIZE];
@@ -99,8 +100,8 @@ static int sgp4(double tsince, int withvel, kep_t *kep);
 static void kep2xyz(kep_t *K, xyz_t *pos, xyz_t *vel);
 
 static void rv2coe(double r[3], double v[3], double mu, double *p, double *a,
-		double *ecc, double *incl, double *omega, double *argp, double *nu,
-		double *m, double *arglat, double *truelon, double *lonper);
+        double *ecc, double *incl, double *omega, double *argp, double *nu,
+        double *m, double *arglat, double *truelon, double *lonper);
 static double sgn(double x);
 static double mag(double x[3]);
 static void cross(double vec1[3], double vec2[3], double outvec[3]);
@@ -158,26 +159,25 @@ typedef double real;
  */
 
 static INLINE double DCUBE(double a) {
-	return (a * a * a);
+    return (a * a * a);
 }
 static INLINE float FCUBE(float a) {
-	return (a * a * a);
+    return (a * a * a);
 }
 static INLINE int ICUBE(int a) {
-	return (a * a * a);
+    return (a * a * a);
 }
-
 static INLINE double DPOW4(double a) {
-	a *= a;
-	return (a * a);
+    a *= a;
+    return (a * a);
 }
 static INLINE float FPOW4(float a) {
-	a *= a;
-	return (a * a);
+    a *= a;
+    return (a * a);
 }
 static INLINE int IPOW4(int a) {
-	a *= a;
-	return (a * a);
+    a *= a;
+    return (a * a);
 }
 
 /* =========== Do we have sincos() functions available or not ? ======= */
@@ -190,7 +190,6 @@ static INLINE int IPOW4(int a) {
  haven't available sincos() function we define MACROS_SINCOS.
  */
 //#define MACRO_SINCOS
-
 #ifdef MACRO_SINCOS
 #define sincos(x,s,c) {double sc__tmp=(x);\
 		*(s)=sin(sc__tmp);\
@@ -250,13 +249,13 @@ void sincos(double, double *, double *);
 
 /* ================ single / double precision fix-ups =============== */
 
-#define ECC_ZERO	((real)0.0)	/* Zero eccentricity case ? */
-#define ECC_ALL		((real)1.0e-4)	/* For all drag terms in GSFC case. */
-#define ECC_EPS		((real)1.0e-6)	/* Too low for computing further drops. */
-#define ECC_LIMIT_LOW	((real)-1.0e-3)	/* Exit point for serious decaying of orbits. */
-#define ECC_LIMIT_HIGH	((real)(1.0 - ECC_EPS))	/* Too close to 1 */
+#define ECC_ZERO        ((real)0.0)             /* Zero eccentricity case ? */
+#define ECC_ALL         ((real)1.0e-4)          /* For all drag terms in GSFC case. */
+#define ECC_EPS	        ((real)1.0e-6)          /* Too low for computing further drops. */
+#define ECC_LIMIT_LOW   ((real)-1.0e-3)         /* Exit point for serious decaying of orbits. */
+#define ECC_LIMIT_HIGH  ((real)(1.0 - ECC_EPS)) /* Too close to 1 */
 
-#define EPS_COSIO	(1.5e-12)	/* Minimum divisor allowed for (...)/(1+cos(IO)) */
+#define EPS_COSIO   (1.5e-12)   /* Minimum divisor allowed for (...)/(1+cos(IO)) */
 
 #define TOTHRD  (2.0/3.0)
 
@@ -264,8 +263,6 @@ void sincos(double, double *, double *);
 #define NR_EPS  ((real)(1.0e-6))    /* Minimum ~1e-6 min for float. */
 #else
 #define NR_EPS  ((real)(1.0e-12))    /* Minimum ~1e-14 for double. */
-//#define NR_EPS  ((real)(1.0e-14))    /* Minimum ~1e-14 for double. */
-//#define NR_EPS  ((real)(1.0e-8))    /* Minimum ~1e-14 for double. */
 #endif
 
 #define Q0      ((real)120.0)
@@ -289,7 +286,7 @@ void sincos(double, double *, double *);
 #define XKE     ((real)7.43669161331734132e-2)
 #define CK2     ((real)(0.5 * XJ2 * AE * AE))
 #define CK4     ((real)(-0.375 * XJ4 * AE * AE * AE * AE))
-#define QOMS2T  ((real)1.880279159015270643865e-9) /* (pow((Q0 - S0)*AE/XKMPER, 4.0)) */
+#define QOMS2T  ((real)1.880279159015270643865e-9)          /* (pow((Q0 - S0)*AE/XKMPER, 4.0)) */
 #define KS      ((real)(AE * (1.0 + S0/XKMPER)))
 #endif
 static const real a3ovk2 = (real) (-XJ3 / CK2 * (AE * AE * AE));
@@ -326,48 +323,48 @@ int Set_LS_zero = 0; /* Set to 1 to zero Lunar-Solar terms at epoch. */
 
 orbit_t calculate_tle(xyz_t position, xyz_t velocity, _tle_epoch updt_tle_epoch) {
 
-	double p[3], v[3];
-	double semil_rect, nu, arglat, truelon, lonper;
-	orbit_t tmp_tle;
+    double p[3], v[3];
+    double semil_rect, nu, arglat, truelon, lonper;
+    orbit_t tmp_tle;
 
-	/* Take position-velocity in ECI in km-km/s */
-	p[0] = position.x;
-	p[1] = position.y;
-	p[2] = position.z;
-	v[0] = velocity.x;
-	v[1] = velocity.y;
-	v[2] = velocity.z;
-	/* Init TLE */
-	semil_rect = 0; /* semilatus rectum km */
-	tmp_tle.smjaxs = 0; /* semimajor axis km */
-	tmp_tle.ecc = 0; /* eccentricity */
-	tmp_tle.eqinc = 0; /* inclination 0.0  to pi rad */
-	tmp_tle.ascn = 0; /* longitude of ascending node 0.0  to 2pi rad */
-	tmp_tle.argp = 0; /* argument of perigee 0.0  to 2pi rad */
-	nu = 0; /* true anomaly 0.0  to 2pi rad */
-	tmp_tle.mnan = 0; /* mean anomaly 0.0  to 2pi rad */
-	arglat = 0; /* argument of latitude (ci) 0.0  to 2pi rad */
-	truelon = 0; /* true longitude (ce) 0.0  to 2pi rad */
-	lonper = 0; /* longitude of periapsis (ee) 0.0  to 2pi rad */
-	tmp_tle.rev = 0;
-	tmp_tle.bstar = 0;
+    /* Take position-velocity in ECI in km-km/s */
+    p[0] = position.x;
+    p[1] = position.y;
+    p[2] = position.z;
+    v[0] = velocity.x;
+    v[1] = velocity.y;
+    v[2] = velocity.z;
+    /* Init TLE */
+    semil_rect = 0; /* semilatus rectum km */
+    tmp_tle.smjaxs = 0; /* semimajor axis km */
+    tmp_tle.ecc = 0; /* eccentricity */
+    tmp_tle.eqinc = 0; /* inclination 0.0  to pi rad */
+    tmp_tle.ascn = 0; /* longitude of ascending node 0.0  to 2pi rad */
+    tmp_tle.argp = 0; /* argument of perigee 0.0  to 2pi rad */
+    nu = 0; /* true anomaly 0.0  to 2pi rad */
+    tmp_tle.mnan = 0; /* mean anomaly 0.0  to 2pi rad */
+    arglat = 0; /* argument of latitude (ci) 0.0  to 2pi rad */
+    truelon = 0; /* true longitude (ce) 0.0  to 2pi rad */
+    lonper = 0; /* longitude of periapsis (ee) 0.0  to 2pi rad */
+    tmp_tle.rev = 0;
+    tmp_tle.bstar = 0;
 
-	rv2coe(p, v, MU, &semil_rect, &(tmp_tle.smjaxs), &(tmp_tle.ecc),
-			&(tmp_tle.eqinc), &(tmp_tle.ascn), &(tmp_tle.argp), &nu,
-			&(tmp_tle.mnan), &arglat, &truelon, &lonper);
+    rv2coe(p, v, MU, &semil_rect, &(tmp_tle.smjaxs), &(tmp_tle.ecc),
+            &(tmp_tle.eqinc), &(tmp_tle.ascn), &(tmp_tle.argp), &nu,
+            &(tmp_tle.mnan), &arglat, &truelon, &lonper);
 
-	tmp_tle.rev = sqrt(MU / (tmp_tle.smjaxs * tmp_tle.smjaxs * tmp_tle.smjaxs))
-			* SOLAR_DAY_SEC / (2 * PI); /* Mean motion, revolutions per day */
+    tmp_tle.rev = sqrt(MU / (tmp_tle.smjaxs * tmp_tle.smjaxs * tmp_tle.smjaxs))
+            * SOLAR_DAY_SEC / (2 * PI); /* Mean motion, revolutions per day */
 
-	tmp_tle.bstar = EARTH_RADII * CD * RHO * AREA * 0.5 / MASS; /* Drag term .*/
+    tmp_tle.bstar = EARTH_RADII * CD * RHO * AREA * 0.5 / MASS; /* Drag term .*/
 
-	tmp_tle.ep_year = updt_tle_epoch.ep_year; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
-	tmp_tle.ep_day = updt_tle_epoch.ep_day; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
+    tmp_tle.ep_year = updt_tle_epoch.ep_year; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
+    tmp_tle.ep_day = updt_tle_epoch.ep_day; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
 
-	tmp_tle.norb = 13.0; /* Orbit number, for elements */
-	tmp_tle.satno = 13.0; /* Satellite number. */
+    tmp_tle.norb = 13.0; /* Orbit number, for elements */
+    tmp_tle.satno = 13.0; /* Satellite number. */
 
-	return tmp_tle;
+    return tmp_tle;
 }
 
 /* ====================================================================
@@ -395,34 +392,34 @@ orbit_t calculate_tle(xyz_t position, xyz_t velocity, _tle_epoch updt_tle_epoch)
 
 orbit_t read_tle(uint8_t *tle) {
 
-	orbit_t tmp_tle;
-	double bm, bx;
+    orbit_t tmp_tle;
+    double bm, bx;
 
-	tmp_tle.ep_year = (int) i_read(tle, 19, 20);
+    tmp_tle.ep_year = (int) i_read(tle, 19, 20);
 
-	if (tmp_tle.ep_year < 57) {
-		tmp_tle.ep_year += 2000;
-	} else {
-		tmp_tle.ep_year += 1900;
-	}
-	tmp_tle.ep_day = d_read(tle, 21, 32);
+    if (tmp_tle.ep_year < 57) {
+        tmp_tle.ep_year += 2000;
+    } else {
+        tmp_tle.ep_year += 1900;
+    }
+    tmp_tle.ep_day = d_read(tle, 21, 32);
 
-	bm = d_read(tle, 54, 59) * 1.0e-5;
-	bx = d_read(tle, 60, 61);
-	tmp_tle.bstar = bm * pow(10.0, bx);
+    bm = d_read(tle, 54, 59) * 1.0e-5;
+    bx = d_read(tle, 60, 61);
+    tmp_tle.bstar = bm * pow(10.0, bx);
 
-	tmp_tle.eqinc = RAD(d_read(tle, 9+TLE_LINE2_OFFSET, 16+TLE_LINE2_OFFSET));
-	tmp_tle.ascn = RAD(d_read(tle, 18+TLE_LINE2_OFFSET, 25+TLE_LINE2_OFFSET));
-	tmp_tle.ecc = d_read(tle, 27 + TLE_LINE2_OFFSET, 33 + TLE_LINE2_OFFSET)
-			* 1.0e-7;
-	tmp_tle.argp = RAD(d_read(tle, 35+TLE_LINE2_OFFSET, 42+TLE_LINE2_OFFSET));
-	tmp_tle.mnan = RAD(d_read(tle, 44+TLE_LINE2_OFFSET, 51+TLE_LINE2_OFFSET));
-	tmp_tle.rev = d_read(tle, 53 + TLE_LINE2_OFFSET, 63 + TLE_LINE2_OFFSET);
-	tmp_tle.norb = i_read(tle, 64 + TLE_LINE2_OFFSET, 68 + TLE_LINE2_OFFSET);
+    tmp_tle.eqinc = RAD(d_read(tle, 9+TLE_LINE2_OFFSET, 16+TLE_LINE2_OFFSET));
+    tmp_tle.ascn = RAD(d_read(tle, 18+TLE_LINE2_OFFSET, 25+TLE_LINE2_OFFSET));
+    tmp_tle.ecc = d_read(tle, 27 + TLE_LINE2_OFFSET, 33 + TLE_LINE2_OFFSET)
+            * 1.0e-7;
+    tmp_tle.argp = RAD(d_read(tle, 35+TLE_LINE2_OFFSET, 42+TLE_LINE2_OFFSET));
+    tmp_tle.mnan = RAD(d_read(tle, 44+TLE_LINE2_OFFSET, 51+TLE_LINE2_OFFSET));
+    tmp_tle.rev = d_read(tle, 53 + TLE_LINE2_OFFSET, 63 + TLE_LINE2_OFFSET);
+    tmp_tle.norb = i_read(tle, 64 + TLE_LINE2_OFFSET, 68 + TLE_LINE2_OFFSET);
 
-	tmp_tle.satno = 13;
+    tmp_tle.satno = 13;
 
-	return tmp_tle;
+    return tmp_tle;
 }
 
 /* ==================================================================
@@ -431,21 +428,21 @@ orbit_t read_tle(uint8_t *tle) {
  ================================================================== */
 
 static uint32_t i_read(uint8_t *str, uint8_t start, uint8_t stop) {
-	uint32_t itmp = 0;
-	uint8_t ii = 0;
-	uint8_t tmp[TLE_SIZE];
+    uint32_t itmp = 0;
+    uint8_t ii = 0;
+    uint8_t tmp[TLE_SIZE];
 
-	start--; /* 'C' arrays start at 0 */
-	stop--;
+    start--; /* 'C' arrays start at 0 */
+    stop--;
 
-	for (ii = start; ii <= stop; ii++) {
-		*(tmp + ii - start) = str[ii]; /* Copy the characters. */
-	}
-	*(tmp + ii - start) = '\0'; /* NUL terminate */
+    for (ii = start; ii <= stop; ii++) {
+        *(tmp + ii - start) = str[ii]; /* Copy the characters. */
+    }
+    *(tmp + ii - start) = '\0'; /* NUL terminate */
 
-	itmp = atol(tmp); /* Convert to long integer. */
+    itmp = atol(tmp); /* Convert to long integer. */
 
-	return itmp;
+    return itmp;
 }
 
 /* ==================================================================
@@ -454,80 +451,80 @@ static uint32_t i_read(uint8_t *str, uint8_t start, uint8_t stop) {
  ================================================================== */
 
 static double d_read(uint8_t *str, uint8_t start, uint8_t stop) {
-	double dtmp = 0;
-	uint8_t ii = 0;
-	uint8_t tmp[TLE_SIZE];
+    double dtmp = 0;
+    uint8_t ii = 0;
+    uint8_t tmp[TLE_SIZE];
 
-	start--;
-	stop--;
+    start--;
+    stop--;
 
-	for (ii = start; ii <= stop; ii++) {
-		*(tmp + ii - start) = str[ii]; /* Copy the characters. */
-	}
-	*(tmp + ii - start) = '\0'; /* NUL terminate */
+    for (ii = start; ii <= stop; ii++) {
+        *(tmp + ii - start) = str[ii]; /* Copy the characters. */
+    }
+    *(tmp + ii - start) = '\0'; /* NUL terminate */
 
-	dtmp = atof(tmp); /* Convert to long integer. */
+    dtmp = atof(tmp); /* Convert to long integer. */
 
-	return dtmp;
+    return dtmp;
 }
 
 tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
-	int8_t imode;
-	tle_status status;
+    int8_t imode;
+    tle_status status;
 
-	imode = init_sgp4(&new_tle); // Check-Update TLE
-	switch (imode) {
-	case SGP4_ERROR:
-		status = TLE_ERROR; // SGDP error
-		break;
-	case SGP4_NOT_INIT:
-		status = TLE_ERROR; // SGDP not init
-		break;
-	case SGP4_ZERO_ECC:
-		status = TLE_NORMAL; // SGDP zero ecc
-		break;
-	case SGP4_NEAR_SIMP:
-		status = TLE_NORMAL; // SGP4 simple
-		break;
-	case SGP4_NEAR_NORM:
-		status = TLE_NORMAL; // SGP4 normal
-		break;
-	case SGP4_DEEP_NORM:
-		status = TLE_ERROR; // SDP4 normal
-		break;
-	case SGP4_DEEP_RESN:
-		status = TLE_ERROR; // SDP4 resonant
-		break;
-	case SGP4_DEEP_SYNC:
-		status = TLE_ERROR; // SDP4 synchronous
-		break;
-	default:
-		status = TLE_ERROR; // SGDP mode not recognised!
-		break;
-	}
+    imode = init_sgp4(&new_tle); // Check-Update TLE
+    switch (imode) {
+    case SGP4_ERROR:
+        status = TLE_ERROR; // SGDP error
+        break;
+    case SGP4_NOT_INIT:
+        status = TLE_ERROR; // SGDP not init
+        break;
+    case SGP4_ZERO_ECC:
+        status = TLE_NORMAL; // SGDP zero ecc
+        break;
+    case SGP4_NEAR_SIMP:
+        status = TLE_NORMAL; // SGP4 simple
+        break;
+    case SGP4_NEAR_NORM:
+        status = TLE_NORMAL; // SGP4 normal
+        break;
+    case SGP4_DEEP_NORM:
+        status = TLE_ERROR; // SDP4 normal
+        break;
+    case SGP4_DEEP_RESN:
+        status = TLE_ERROR; // SDP4 resonant
+        break;
+    case SGP4_DEEP_SYNC:
+        status = TLE_ERROR; // SDP4 synchronous
+        break;
+    default:
+        status = TLE_ERROR; // SGDP mode not recognised!
+        break;
+    }
 
-	switch (status) {
-	case TLE_ERROR:
-		// Not update the TLE and init again sgp4 with old TLE
-		init_sgp4(tle);
-		break;
-	case TLE_NORMAL:
-		tle->ep_year = new_tle.ep_year;
-		tle->ep_day = new_tle.ep_day;
-		tle->rev = new_tle.rev;
-		tle->bstar = new_tle.bstar;
-		tle->eqinc = new_tle.eqinc;
-		tle->ecc = new_tle.ecc;
-		tle->mnan = new_tle.mnan;
-		tle->argp = new_tle.argp;
-		tle->ascn = new_tle.ascn;
-		tle->smjaxs = new_tle.smjaxs;
-		tle->norb = new_tle.norb;
-		tle->satno = new_tle.satno;
-		break;
-	}
+    switch (status) {
+    case TLE_ERROR:
+        // Not update the TLE and init again sgp4 with old TLE
+        init_sgp4(tle);
+        break;
+    case TLE_NORMAL:
+        tle->ep_year = new_tle.ep_year;
+        tle->ep_day = new_tle.ep_day;
+        tle->rev = new_tle.rev;
+        tle->bstar = new_tle.bstar;
+        tle->eqinc = new_tle.eqinc;
+        tle->ecc = new_tle.ecc;
+        tle->mnan = new_tle.mnan;
+        tle->argp = new_tle.argp;
+        tle->ascn = new_tle.ascn;
+        tle->smjaxs = new_tle.smjaxs;
+        tle->norb = new_tle.norb;
+        tle->satno = new_tle.satno;
+        break;
+    }
 
-	return status;
+    return status;
 }
 
 /* ======================================================================
@@ -537,29 +534,29 @@ tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
 
  jd   : Time as Julian day number.
 
- pos  : Pointer to posiition vector, km (NULL if not required).
+ pos  : Pointer to position vector, km (NULL if not required).
 
  vel  : Pointer to velocity vector, km/sec (NULL if not required).
 
  ====================================================================== */
 
 int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel) {
-	kep_t K;
-	int withvel, rv;
-	double tsince;
+    kep_t K;
+    int withvel, rv;
+    double tsince;
 
-	tsince = (jd - SGP4_jd0) * XMNPDA;
+    tsince = (jd - SGP4_jd0) * XMNPDA;
 
-	if (vel != NULL)
-		withvel = 1;
-	else
-		withvel = 0;
+    if (vel != NULL)
+        withvel = 1;
+    else
+        withvel = 0;
 
-	rv = sgp4(tsince, withvel, &K);
+    rv = sgp4(tsince, withvel, &K);
 
-	kep2xyz(&K, pos, vel);
+    kep2xyz(&K, pos, vel);
 
-	return rv;
+    return rv;
 }
 
 /* =======================================================================
@@ -582,259 +579,259 @@ int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel) {
  ======================================================================= */
 
 static int init_sgp4(orbit_t *orb) {
-	LOCAL_REAL theta2, theta4, xhdot1, x1m5th;
-	LOCAL_REAL s4, del1, del0;
-	LOCAL_REAL betao, betao2, coef, coef1;
-	LOCAL_REAL etasq, eeta, qoms24;
-	LOCAL_REAL pinvsq, tsi, psisq, c1sq;
-	LOCAL_DOUBLE a0, a1, epoch;
-	real temp0, temp1, temp2, temp3;
-	long iday, iyear;
+    LOCAL_REAL theta2, theta4, xhdot1, x1m5th;
+    LOCAL_REAL s4, del1, del0;
+    LOCAL_REAL betao, betao2, coef, coef1;
+    LOCAL_REAL etasq, eeta, qoms24;
+    LOCAL_REAL pinvsq, tsi, psisq, c1sq;
+    LOCAL_DOUBLE a0, a1, epoch;
+    real temp0, temp1, temp2, temp3;
+    long iday, iyear;
 
-	/* Copy over elements. */
-	/* Convert year to Gregorian with century as 1994 or 94 type ? */
+    /* Copy over elements. */
+    /* Convert year to Gregorian with century as 1994 or 94 type ? */
 
-	iyear = (long) orb->ep_year;
+    iyear = (long) orb->ep_year;
 
-	if (iyear < 1960) {
-		/* Assume 0 and 100 both refer to 2000AD */
-		iyear += (iyear < 60 ? 2000 : 1900);
-	}
+    if (iyear < 1960) {
+        /* Assume 0 and 100 both refer to 2000AD */
+        iyear += (iyear < 60 ? 2000 : 1900);
+    }
 
-	if (iyear < 1901 || iyear > 2099) {
-		imode = SGP4_ERROR;
-		return imode;
-	}
+    if (iyear < 1901 || iyear > 2099) {
+        imode = SGP4_ERROR;
+        return imode;
+    }
 
-	Isat = orb->satno;
+    Isat = orb->satno;
 
-	/* Compute days from 1st Jan 1900 (works 1901 to 2099 only). */
+    /* Compute days from 1st Jan 1900 (works 1901 to 2099 only). */
 
-	iday = ((iyear - 1901) * 1461L) / 4L + 364L + 1L;
+    iday = ((iyear - 1901) * 1461L) / 4L + 364L + 1L;
 
-	SGP4_jd0 = JD1900 + iday + (orb->ep_day - 1.0); /* Julian day number. */
+    SGP4_jd0 = JD1900 + iday + (orb->ep_day - 1.0); /* Julian day number. */
 
-	epoch = (iyear - 1900) * 1.0e3 + orb->ep_day; /* YYDDD.DDDD as from 2-line. */
+    epoch = (iyear - 1900) * 1.0e3 + orb->ep_day; /* YYDDD.DDDD as from 2-line. */
 
-	eo = (real) orb->ecc;
-	xno = (double) orb->rev * TWOPI / XMNPDA; /* Radian / unit time. */
-	xincl = (real) orb->eqinc;
-	xnodeo = (real) orb->ascn;
-	omegao = (real) orb->argp;
-	xmo = (real) orb->mnan;
-	bstar = (real) orb->bstar;
+    eo = (real) orb->ecc;
+    xno = (double) orb->rev * TWOPI / XMNPDA; /* Radian / unit time. */
+    xincl = (real) orb->eqinc;
+    xnodeo = (real) orb->ascn;
+    omegao = (real) orb->argp;
+    xmo = (real) orb->mnan;
+    bstar = (real) orb->bstar;
 
-	/* A few simple error checks here. */
+    /* A few simple error checks here. */
 
-	if (eo < (real) 0.0 || eo > ECC_LIMIT_HIGH) {
-		imode = SGP4_ERROR;
-		return imode;
-	}
+    if (eo < (real) 0.0 || eo > ECC_LIMIT_HIGH) {
+        imode = SGP4_ERROR;
+        return imode;
+    }
 
-	if (xno < 0.035 * TWOPI / XMNPDA || xno > 18.0 * TWOPI / XMNPDA) {
-		imode = SGP4_ERROR;
-		return imode;
-	}
+    if (xno < 0.035 * TWOPI / XMNPDA || xno > 18.0 * TWOPI / XMNPDA) {
+        imode = SGP4_ERROR;
+        return imode;
+    }
 
-	if (xincl < (real) 0.0 || xincl > (real) PI) {
-		imode = SGP4_ERROR;
-		return imode;
-	}
+    if (xincl < (real) 0.0 || xincl > (real) PI) {
+        imode = SGP4_ERROR;
+        return imode;
+    }
 
-	/* Start the initialisation. */
+    /* Start the initialisation. */
 
-	if (eo < ECC_ZERO)
-		imode = SGP4_ZERO_ECC; /* Special mode for "ideal" circular orbit. */
-	else
-		imode = SGP4_NOT_INIT;
+    if (eo < ECC_ZERO)
+        imode = SGP4_ZERO_ECC; /* Special mode for "ideal" circular orbit. */
+    else
+        imode = SGP4_NOT_INIT;
 
-	/*
-	 Recover original mean motion (xnodp) and semimajor axis (aodp)
-	 from input elements.
-	 */
+    /*
+     Recover original mean motion (xnodp) and semimajor axis (aodp)
+     from input elements.
+     */
 
-	SINCOS(xincl, &sinIO, &cosIO);
+    SINCOS(xincl, &sinIO, &cosIO);
 
-	theta2 = cosIO * cosIO;
-	theta4 = theta2 * theta2;
-	x3thm1 = (real) 3.0 * theta2 - (real) 1.0;
-	x1mth2 = (real) 1.0 - theta2;
-	x7thm1 = (real) 7.0 * theta2 - (real) 1.0;
+    theta2 = cosIO * cosIO;
+    theta4 = theta2 * theta2;
+    x3thm1 = (real) 3.0 * theta2 - (real) 1.0;
+    x1mth2 = (real) 1.0 - theta2;
+    x7thm1 = (real) 7.0 * theta2 - (real) 1.0;
 
-	a1 = pow(XKE / xno, TOTHRD);
-	betao2 = (real) 1.0 - eo * eo;
-	betao = SQRT(betao2);
-	temp0 = (real) (1.5 * CK2) * x3thm1 / (betao * betao2);
-	del1 = temp0 / (a1 * a1);
-	a0 = a1 * (1.0 - del1 * (1.0 / 3.0 + del1 * (1.0 + del1 * 134.0 / 81.0)));
-	del0 = temp0 / (a0 * a0);
-	xnodp = xno / (1.0 + del0);
-	aodp = (real) (a0 / (1.0 - del0));
-	perigee = (aodp * (1.0 - eo) - AE) * XKMPER;
-	apogee = (aodp * (1.0 + eo) - AE) * XKMPER;
-	period = (TWOPI * 1440.0 / XMNPDA) / xnodp;
+    a1 = pow(XKE / xno, TOTHRD);
+    betao2 = (real) 1.0 - eo * eo;
+    betao = SQRT(betao2);
+    temp0 = (real) (1.5 * CK2) * x3thm1 / (betao * betao2);
+    del1 = temp0 / (a1 * a1);
+    a0 = a1 * (1.0 - del1 * (1.0 / 3.0 + del1 * (1.0 + del1 * 134.0 / 81.0)));
+    del0 = temp0 / (a0 * a0);
+    xnodp = xno / (1.0 + del0);
+    aodp = (real) (a0 / (1.0 - del0));
+    perigee = (aodp * (1.0 - eo) - AE) * XKMPER;
+    apogee = (aodp * (1.0 + eo) - AE) * XKMPER;
+    period = (TWOPI * 1440.0 / XMNPDA) / xnodp;
 
-	if (perigee <= 0.0) {
-		;
-	}
+    if (perigee <= 0.0) {
+        ;
+    }
 
-	if (imode == SGP4_ZERO_ECC)
-		return imode;
+    if (imode == SGP4_ZERO_ECC)
+        return imode;
 
-	if (period >= 225.0 && Set_LS_zero < 2) {
-		imode = SGP4_DEEP_NORM; /* Deep-Space model(s). */
-	} else if (perigee < 220.0) {
-		/*
-		 For perigee less than 220 km the imode flag is set so the
-		 equations are truncated to linear variation in sqrt A and
-		 quadratic variation in mean anomaly. Also the c3 term, the
-		 delta omega term and the delta m term are dropped.
-		 */
-		imode = SGP4_NEAR_SIMP; /* Near-space, simplified equations. */
-	} else {
-		imode = SGP4_NEAR_NORM; /* Near-space, normal equations. */
-	}
+    if (period >= 225.0 && Set_LS_zero < 2) {
+        imode = SGP4_DEEP_NORM; /* Deep-Space model(s). */
+    } else if (perigee < 220.0) {
+        /*
+         For perigee less than 220 km the imode flag is set so the
+         equations are truncated to linear variation in sqrt A and
+         quadratic variation in mean anomaly. Also the c3 term, the
+         delta omega term and the delta m term are dropped.
+         */
+        imode = SGP4_NEAR_SIMP; /* Near-space, simplified equations. */
+    } else {
+        imode = SGP4_NEAR_NORM; /* Near-space, normal equations. */
+    }
 
-	/* For perigee below 156 km the values of S and QOMS2T are altered */
+    /* For perigee below 156 km the values of S and QOMS2T are altered */
 
-	if (perigee < 156.0) {
-		s4 = (real) (perigee - 78.0);
+    if (perigee < 156.0) {
+        s4 = (real) (perigee - 78.0);
 
-		if (s4 < (real) 20.0) {
-			s4 = (real) 20.0;
-		} else {
-			;
-		}
+        if (s4 < (real) 20.0) {
+            s4 = (real) 20.0;
+        } else {
+            ;
+        }
 
-		qoms24 = POW4((real) ((120.0 - s4) * (AE / XKMPER)));
-		s4 = (real) (s4 / XKMPER + AE);
-	} else {
-		s4 = KS;
-		qoms24 = QOMS2T;
-	}
+        qoms24 = POW4((real) ((120.0 - s4) * (AE / XKMPER)));
+        s4 = (real) (s4 / XKMPER + AE);
+    } else {
+        s4 = KS;
+        qoms24 = QOMS2T;
+    }
 
-	pinvsq = (real) 1.0 / (aodp * aodp * betao2 * betao2);
-	tsi = (real) 1.0 / (aodp - s4);
-	eta = aodp * eo * tsi;
-	etasq = eta * eta;
-	eeta = eo * eta;
-	psisq = FABS((real )1.0 - etasq);
-	coef = qoms24 * POW4(tsi);
-	coef1 = coef / POW(psisq, 3.5);
+    pinvsq = (real) 1.0 / (aodp * aodp * betao2 * betao2);
+    tsi = (real) 1.0 / (aodp - s4);
+    eta = aodp * eo * tsi;
+    etasq = eta * eta;
+    eeta = eo * eta;
+    psisq = FABS((real )1.0 - etasq);
+    coef = qoms24 * POW4(tsi);
+    coef1 = coef / POW(psisq, 3.5);
 
-	c2 =
-			coef1 * (real) xnodp
-					* (aodp
-							* ((real) 1.0 + (real) 1.5 * etasq
-									+ eeta * ((real) 4.0 + etasq))
-							+ (real) (0.75 * CK2) * tsi / psisq * x3thm1
-									* ((real) 8.0
-											+ (real) 3.0 * etasq
-													* ((real) 8.0 + etasq)));
+    c2 =
+            coef1 * (real) xnodp
+                    * (aodp
+                            * ((real) 1.0 + (real) 1.5 * etasq
+                                    + eeta * ((real) 4.0 + etasq))
+                            + (real) (0.75 * CK2) * tsi / psisq * x3thm1
+                                    * ((real) 8.0
+                                            + (real) 3.0 * etasq
+                                                    * ((real) 8.0 + etasq)));
 
-	c1 = bstar * c2;
+    c1 = bstar * c2;
 
-	c4 =
-			(real) 2.0 * (real) xnodp * coef1 * aodp * betao2
-					* (eta * ((real) 2.0 + (real) 0.5 * etasq)
-							+ eo * ((real) 0.5 + (real) 2.0 * etasq)
-							- (real) (2.0 * CK2) * tsi / (aodp * psisq)
-									* ((real) -3.0 * x3thm1
-											* ((real) 1.0 - (real) 2.0 * eeta
-													+ etasq
-															* ((real) 1.5
-																	- (real) 0.5
-																			* eeta))
-											+ (real) 0.75 * x1mth2
-													* ((real) 2.0 * etasq
-															- eeta
-																	* ((real) 1.0
-																			+ etasq))
-													* COS((real )2.0 * omegao)));
+    c4 =
+            (real) 2.0 * (real) xnodp * coef1 * aodp * betao2
+                    * (eta * ((real) 2.0 + (real) 0.5 * etasq)
+                            + eo * ((real) 0.5 + (real) 2.0 * etasq)
+                            - (real) (2.0 * CK2) * tsi / (aodp * psisq)
+                                    * ((real) -3.0 * x3thm1
+                                            * ((real) 1.0 - (real) 2.0 * eeta
+                                                    + etasq
+                                                            * ((real) 1.5
+                                                                    - (real) 0.5
+                                                                            * eeta))
+                                            + (real) 0.75 * x1mth2
+                                                    * ((real) 2.0 * etasq
+                                                            - eeta
+                                                                    * ((real) 1.0
+                                                                            + etasq))
+                                                    * COS((real )2.0 * omegao)));
 
-	c5 = c3 = omgcof = (real) 0.0;
+    c5 = c3 = omgcof = (real) 0.0;
 
-	if (imode == SGP4_NEAR_NORM) {
-		/* BSTAR drag terms for normal near-space 'normal' model only. */
-		c5 = (real) 2.0 * coef1 * aodp * betao2
-				* ((real) 1.0 + (real) 2.75 * (etasq + eeta) + eeta * etasq);
+    if (imode == SGP4_NEAR_NORM) {
+        /* BSTAR drag terms for normal near-space 'normal' model only. */
+        c5 = (real) 2.0 * coef1 * aodp * betao2
+                * ((real) 1.0 + (real) 2.75 * (etasq + eeta) + eeta * etasq);
 
-		if (eo > ECC_ALL) {
-			c3 = coef * tsi * a3ovk2 * (real) xnodp * (real) AE * sinIO / eo;
-		}
+        if (eo > ECC_ALL) {
+            c3 = coef * tsi * a3ovk2 * (real) xnodp * (real) AE * sinIO / eo;
+        }
 
-		omgcof = bstar * c3 * COS(omegao);
-	}
+        omgcof = bstar * c3 * COS(omegao);
+    }
 
-	temp1 = (real) (3.0 * CK2) * pinvsq * (real) xnodp;
-	temp2 = temp1 * CK2 * pinvsq;
-	temp3 = (real) (1.25 * CK4) * pinvsq * pinvsq * (real) xnodp;
+    temp1 = (real) (3.0 * CK2) * pinvsq * (real) xnodp;
+    temp2 = temp1 * CK2 * pinvsq;
+    temp3 = (real) (1.25 * CK4) * pinvsq * pinvsq * (real) xnodp;
 
-	xmdot = xnodp
-			+ (0.5 * temp1 * betao * x3thm1
-					+ (real) 0.0625 * temp2 * betao
-							* ((real) 13.0 - (real) 78.0 * theta2
-									+ (real) 137.0 * theta4));
+    xmdot = xnodp
+            + (0.5 * temp1 * betao * x3thm1
+                    + (real) 0.0625 * temp2 * betao
+                            * ((real) 13.0 - (real) 78.0 * theta2
+                                    + (real) 137.0 * theta4));
 
-	x1m5th = (real) 1.0 - (real) 5.0 * theta2;
+    x1m5th = (real) 1.0 - (real) 5.0 * theta2;
 
-	omgdot =
-			(real) -0.5 * temp1 * x1m5th
-					+ (real) 0.0625 * temp2
-							* ((real) 7.0 - (real) 114.0 * theta2
-									+ (real) 395.0 * theta4)
-					+ temp3
-							* ((real) 3.0 - (real) 36.0 * theta2
-									+ (real) 49.0 * theta4);
+    omgdot =
+            (real) -0.5 * temp1 * x1m5th
+                    + (real) 0.0625 * temp2
+                            * ((real) 7.0 - (real) 114.0 * theta2
+                                    + (real) 395.0 * theta4)
+                    + temp3
+                            * ((real) 3.0 - (real) 36.0 * theta2
+                                    + (real) 49.0 * theta4);
 
-	xhdot1 = -temp1 * cosIO;
-	xnodot = xhdot1
-			+ ((real) 0.5 * temp2 * ((real) 4.0 - (real) 19.0 * theta2)
-					+ (real) 2.0 * temp3 * ((real) 3.0 - (real) 7.0 * theta2))
-					* cosIO;
+    xhdot1 = -temp1 * cosIO;
+    xnodot = xhdot1
+            + ((real) 0.5 * temp2 * ((real) 4.0 - (real) 19.0 * theta2)
+                    + (real) 2.0 * temp3 * ((real) 3.0 - (real) 7.0 * theta2))
+                    * cosIO;
 
-	xmcof = (real) 0.0;
-	if (eo > ECC_ALL) {
-		xmcof = (real) (-TOTHRD * AE) * coef * bstar / eeta;
-	}
+    xmcof = (real) 0.0;
+    if (eo > ECC_ALL) {
+        xmcof = (real) (-TOTHRD * AE) * coef * bstar / eeta;
+    }
 
-	xnodcf = (real) 3.5 * betao2 * xhdot1 * c1;
-	t2cof = (real) 1.5 * c1;
+    xnodcf = (real) 3.5 * betao2 * xhdot1 * c1;
+    t2cof = (real) 1.5 * c1;
 
-	/* Check for possible divide-by-zero for X/(1+cosIO) when calculating xlcof */
-	temp0 = (real) 1.0 + cosIO;
+    /* Check for possible divide-by-zero for X/(1+cosIO) when calculating xlcof */
+    temp0 = (real) 1.0 + cosIO;
 
-	if (fabs(temp0) < EPS_COSIO)
-		temp0 = (real) SIGN(EPS_COSIO, temp0);
+    if (fabs(temp0) < EPS_COSIO)
+        temp0 = (real) SIGN(EPS_COSIO, temp0);
 
-	xlcof = (real) 0.125 * a3ovk2 * sinIO * ((real) 3.0 + (real) 5.0 * cosIO)
-			/ temp0;
+    xlcof = (real) 0.125 * a3ovk2 * sinIO * ((real) 3.0 + (real) 5.0 * cosIO)
+            / temp0;
 
-	aycof = (real) 0.25 * a3ovk2 * sinIO;
+    aycof = (real) 0.25 * a3ovk2 * sinIO;
 
-	SINCOS(xmo, &sinXMO, &cosXMO);
-	delmo = CUBE((real) 1.0 + eta * cosXMO);
+    SINCOS(xmo, &sinXMO, &cosXMO);
+    delmo = CUBE((real) 1.0 + eta * cosXMO);
 
-	if (imode == SGP4_NEAR_NORM) {
-		c1sq = c1 * c1;
-		d2 = (real) 4.0 * aodp * tsi * c1sq;
-		temp0 = d2 * tsi * c1 / (real) 3.0;
-		d3 = ((real) 17.0 * aodp + s4) * temp0;
-		d4 = (real) 0.5 * temp0 * aodp * tsi
-				* ((real) 221.0 * aodp + (real) 31.0 * s4) * c1;
-		t3cof = d2 + (real) 2.0 * c1sq;
-		t4cof = (real) 0.25
-				* ((real) 3.0 * d3
-						+ c1 * ((real) 12.0 * d2 + (real) 10.0 * c1sq));
-		t5cof = (real) 0.2
-				* ((real) 3.0 * d4 + (real) 12.0 * c1 * d3
-						+ (real) 6.0 * d2 * d2
-						+ (real) 15.0 * c1sq * ((real) 2.0 * d2 + c1sq));
-	} else if (imode == SGP4_DEEP_NORM) {
-		;
-	}
+    if (imode == SGP4_NEAR_NORM) {
+        c1sq = c1 * c1;
+        d2 = (real) 4.0 * aodp * tsi * c1sq;
+        temp0 = d2 * tsi * c1 / (real) 3.0;
+        d3 = ((real) 17.0 * aodp + s4) * temp0;
+        d4 = (real) 0.5 * temp0 * aodp * tsi
+                * ((real) 221.0 * aodp + (real) 31.0 * s4) * c1;
+        t3cof = d2 + (real) 2.0 * c1sq;
+        t4cof = (real) 0.25
+                * ((real) 3.0 * d3
+                        + c1 * ((real) 12.0 * d2 + (real) 10.0 * c1sq));
+        t5cof = (real) 0.2
+                * ((real) 3.0 * d4 + (real) 12.0 * c1 * d3
+                        + (real) 6.0 * d2 * d2
+                        + (real) 15.0 * c1sq * ((real) 2.0 * d2 + c1sq));
+    } else if (imode == SGP4_DEEP_NORM) {
+        ;
+    }
 
-	return imode;
+    return imode;
 }
 
 /* =======================================================================
@@ -860,213 +857,213 @@ static int init_sgp4(orbit_t *orb) {
  ======================================================================= */
 
 static int sgp4(double tsince, int withvel, kep_t *kep) {
-	LOCAL_REAL rk, uk, xnodek, xinck, em, xinc;
-	LOCAL_REAL xnode, delm, axn, ayn, omega;
-	LOCAL_REAL capu, epw, elsq, invR, beta2, betal;
-	LOCAL_REAL sinu, sin2u, cosu, cos2u;
-	LOCAL_REAL a, e, r, u, pl;
-	LOCAL_REAL sinEPW, cosEPW, sinOMG, cosOMG;
-	LOCAL_DOUBLE xmp, xl, xlt;
-	const int MAXI = 10;
+    LOCAL_REAL rk, uk, xnodek, xinck, em, xinc;
+    LOCAL_REAL xnode, delm, axn, ayn, omega;
+    LOCAL_REAL capu, epw, elsq, invR, beta2, betal;
+    LOCAL_REAL sinu, sin2u, cosu, cos2u;
+    LOCAL_REAL a, e, r, u, pl;
+    LOCAL_REAL sinEPW, cosEPW, sinOMG, cosOMG;
+    LOCAL_DOUBLE xmp, xl, xlt;
+    const int MAXI = 10;
 
-	real esinE, ecosE, maxnr;
-	real temp0, temp1, temp2, temp3;
-	real tempa, tempe, templ;
-	int ii;
+    real esinE, ecosE, maxnr;
+    real temp0, temp1, temp2, temp3;
+    real tempa, tempe, templ;
+    int ii;
 
 #ifdef SGP4_SNGL
-	real ts = (real) tsince;
+    real ts = (real) tsince;
 #else
 #define ts tsince
 #endif /* ! SGP4_SNGL */
 
-	/* Update for secular gravity and atmospheric drag. */
+    /* Update for secular gravity and atmospheric drag. */
 
-	em = eo;
-	xinc = xincl;
+    em = eo;
+    xinc = xincl;
 
-	xmp = (double) xmo + xmdot * tsince;
-	xnode = xnodeo + ts * (xnodot + ts * xnodcf);
-	omega = omegao + omgdot * ts;
+    xmp = (double) xmo + xmdot * tsince;
+    xnode = xnodeo + ts * (xnodot + ts * xnodcf);
+    omega = omegao + omgdot * ts;
 
-	switch (imode) {
-	case SGP4_ZERO_ECC:
-		/* Not a "real" orbit but OK for fast computation searches. */
-		kep->smjaxs = kep->radius = (double) aodp * XKMPER / AE;
-		kep->theta = fmod(PI + xnodp * tsince, TWOPI) - PI;
-		kep->eqinc = (double) xincl;
-		kep->ascn = xnodeo;
+    switch (imode) {
+    case SGP4_ZERO_ECC:
+        /* Not a "real" orbit but OK for fast computation searches. */
+        kep->smjaxs = kep->radius = (double) aodp * XKMPER / AE;
+        kep->theta = fmod(PI + xnodp * tsince, TWOPI) - PI;
+        kep->eqinc = (double) xincl;
+        kep->ascn = xnodeo;
 
-		kep->argp = 0;
-		kep->ecc = 0;
+        kep->argp = 0;
+        kep->ecc = 0;
 
-		kep->rfdotk = 0;
-		if (withvel)
-			kep->rfdotk = aodp * xnodp * (XKMPER / AE * XMNPDA / 86400.0); /* For km/sec */
-		else
-			kep->rfdotk = 0;
+        kep->rfdotk = 0;
+        if (withvel)
+            kep->rfdotk = aodp * xnodp * (XKMPER / AE * XMNPDA / 86400.0); /* For km/sec */
+        else
+            kep->rfdotk = 0;
 
-		return imode;
+        return imode;
 
-	case SGP4_NEAR_SIMP:
-		tempa = (real) 1.0 - ts * c1;
-		tempe = bstar * ts * c4;
-		templ = ts * ts * t2cof;
-		a = aodp * tempa * tempa;
-		e = em - tempe;
-		xl = xmp + omega + xnode + xnodp * templ;
-		break;
+    case SGP4_NEAR_SIMP:
+        tempa = (real) 1.0 - ts * c1;
+        tempe = bstar * ts * c4;
+        templ = ts * ts * t2cof;
+        a = aodp * tempa * tempa;
+        e = em - tempe;
+        xl = xmp + omega + xnode + xnodp * templ;
+        break;
 
-	case SGP4_NEAR_NORM:
-		delm = xmcof * (CUBE((real) 1.0 + eta * COS(xmp)) - delmo);
-		temp0 = ts * omgcof + delm;
-		xmp += (double) temp0;
-		omega -= temp0;
-		tempa = (real) 1.0 - (ts * (c1 + ts * (d2 + ts * (d3 + ts * d4))));
-		tempe = bstar * (c4 * ts + c5 * (SIN(xmp) - sinXMO));
-		templ = ts * ts * (t2cof + ts * (t3cof + ts * (t4cof + ts * t5cof)));
-		//xmp   += (double)temp0;
-		a = aodp * tempa * tempa;
-		e = em - tempe;
-		xl = xmp + omega + xnode + xnodp * templ;
-		break;
+    case SGP4_NEAR_NORM:
+        delm = xmcof * (CUBE((real) 1.0 + eta * COS(xmp)) - delmo);
+        temp0 = ts * omgcof + delm;
+        xmp += (double) temp0;
+        omega -= temp0;
+        tempa = (real) 1.0 - (ts * (c1 + ts * (d2 + ts * (d3 + ts * d4))));
+        tempe = bstar * (c4 * ts + c5 * (SIN(xmp) - sinXMO));
+        templ = ts * ts * (t2cof + ts * (t3cof + ts * (t4cof + ts * t5cof)));
+        //xmp   += (double)temp0;
+        a = aodp * tempa * tempa;
+        e = em - tempe;
+        xl = xmp + omega + xnode + xnodp * templ;
+        break;
 
-	default:
-		return SGP4_ERROR;
-	}
+    default:
+        return SGP4_ERROR;
+    }
 
-	if (a < (real) 1.0) {
-		return SGP4_ERROR;
-	}
+    if (a < (real) 1.0) {
+        return SGP4_ERROR;
+    }
 
-	if (e < ECC_LIMIT_LOW) {
-		return SGP4_ERROR;
-	}
+    if (e < ECC_LIMIT_LOW) {
+        return SGP4_ERROR;
+    }
 
-	if (e < ECC_EPS) {
-		e = ECC_EPS;
-	} else if (e > ECC_LIMIT_HIGH) {
-		e = ECC_LIMIT_HIGH;
-	}
+    if (e < ECC_EPS) {
+        e = ECC_EPS;
+    } else if (e > ECC_LIMIT_HIGH) {
+        e = ECC_LIMIT_HIGH;
+    }
 
-	beta2 = (real) 1.0 - e * e;
+    beta2 = (real) 1.0 - e * e;
 
-	/* Long period periodics */
-	SINCOS(omega, &sinOMG, &cosOMG);
+    /* Long period periodics */
+    SINCOS(omega, &sinOMG, &cosOMG);
 
-	temp0 = (real) 1.0 / (a * beta2);
-	axn = e * cosOMG;
-	ayn = e * sinOMG + temp0 * aycof;
-	xlt = xl + temp0 * xlcof * axn;
+    temp0 = (real) 1.0 / (a * beta2);
+    axn = e * cosOMG;
+    ayn = e * sinOMG + temp0 * aycof;
+    xlt = xl + temp0 * xlcof * axn;
 
-	elsq = axn * axn + ayn * ayn;
-	if (elsq >= (real) 1.0) {
-		return SGP4_ERROR;
-	}
+    elsq = axn * axn + ayn * ayn;
+    if (elsq >= (real) 1.0) {
+        return SGP4_ERROR;
+    }
 
-	/* Sensibility check for N-R correction. */
-	kep->ecc = sqrt(elsq);
+    /* Sensibility check for N-R correction. */
+    kep->ecc = sqrt(elsq);
 
-	/*
-	 * Solve Kepler's equation using Newton-Raphson root solving. Here 'capu' is
-	 * almost the "Mean anomaly", initialise the "Eccentric Anomaly" term 'epw'.
-	 * The fmod() saves reduction of angle to +/-2pi in SINCOS() and prevents
-	 * convergence problems.
-	 *
-	 * Later modified to support 2nd order NR method which saves roughly 1 iteration
-	 * for only a couple of arithmetic operations.
-	 */
+    /*
+     * Solve Kepler's equation using Newton-Raphson root solving. Here 'capu' is
+     * almost the "Mean anomaly", initialise the "Eccentric Anomaly" term 'epw'.
+     * The fmod() saves reduction of angle to +/-2pi in SINCOS() and prevents
+     * convergence problems.
+     *
+     * Later modified to support 2nd order NR method which saves roughly 1 iteration
+     * for only a couple of arithmetic operations.
+     */
 
-	epw = capu = fmod(xlt - xnode, TWOPI);
+    epw = capu = fmod(xlt - xnode, TWOPI);
 
-	maxnr = kep->ecc;
+    maxnr = kep->ecc;
 
-	for (ii = 0; ii < MAXI; ii++) {
-		double nr, f, df;
-		SINCOS(epw, &sinEPW, &cosEPW);
+    for (ii = 0; ii < MAXI; ii++) {
+        double nr, f, df;
+        SINCOS(epw, &sinEPW, &cosEPW);
 
-		ecosE = axn * cosEPW + ayn * sinEPW;
-		esinE = axn * sinEPW - ayn * cosEPW;
+        ecosE = axn * cosEPW + ayn * sinEPW;
+        esinE = axn * sinEPW - ayn * cosEPW;
 
-		f = capu - epw + esinE;
-		if (fabs(f) < NR_EPS)
-			break;
+        f = capu - epw + esinE;
+        if (fabs(f) < NR_EPS)
+            break;
 
-		df = 1.0 - ecosE;
+        df = 1.0 - ecosE;
 
-		/* 1st order Newton-Raphson correction. */
-		nr = f / df;
+        /* 1st order Newton-Raphson correction. */
+        nr = f / df;
 
-		if (ii == 0 && FABS(nr) > 1.25 * maxnr)
-			nr = SIGN(maxnr, nr);
+        if (ii == 0 && FABS(nr) > 1.25 * maxnr)
+            nr = SIGN(maxnr, nr);
 #if 1
-		/* 2nd order Newton-Raphson correction. */
-		else
-			nr = f / (df + 0.5 * esinE * nr); /* f/(df - 0.5*d2f*f/df) */
+        /* 2nd order Newton-Raphson correction. */
+        else
+            nr = f / (df + 0.5 * esinE * nr); /* f/(df - 0.5*d2f*f/df) */
 #endif
 
-		epw += nr; /* Newton-Raphson correction of -F/DF. */
-		//if (fabs(nr) < NR_EPS) break;
-	}
+        epw += nr; /* Newton-Raphson correction of -F/DF. */
+        //if (fabs(nr) < NR_EPS) break;
+    }
 
-	/* Short period preliminary quantities */
-	temp0 = (real) 1.0 - elsq;
-	betal = SQRT(temp0);
-	pl = a * temp0;
-	r = a * ((real) 1.0 - ecosE);
-	invR = (real) 1.0 / r;
-	temp2 = a * invR;
-	temp3 = (real) 1.0 / ((real) 1.0 + betal);
-	cosu = temp2 * (cosEPW - axn + ayn * esinE * temp3);
-	sinu = temp2 * (sinEPW - ayn - axn * esinE * temp3);
-	u = ATAN2(sinu, cosu);
-	sin2u = (real) 2.0 * sinu * cosu;
-	cos2u = (real) 2.0 * cosu * cosu - (real) 1.0;
-	temp0 = (real) 1.0 / pl;
-	temp1 = CK2 * temp0;
-	temp2 = temp1 * temp0;
+    /* Short period preliminary quantities */
+    temp0 = (real) 1.0 - elsq;
+    betal = SQRT(temp0);
+    pl = a * temp0;
+    r = a * ((real) 1.0 - ecosE);
+    invR = (real) 1.0 / r;
+    temp2 = a * invR;
+    temp3 = (real) 1.0 / ((real) 1.0 + betal);
+    cosu = temp2 * (cosEPW - axn + ayn * esinE * temp3);
+    sinu = temp2 * (sinEPW - ayn - axn * esinE * temp3);
+    u = ATAN2(sinu, cosu);
+    sin2u = (real) 2.0 * sinu * cosu;
+    cos2u = (real) 2.0 * cosu * cosu - (real) 1.0;
+    temp0 = (real) 1.0 / pl;
+    temp1 = CK2 * temp0;
+    temp2 = temp1 * temp0;
 
-	/* Update for short term periodics to position terms. */
+    /* Update for short term periodics to position terms. */
 
-	rk = r * ((real) 1.0 - (real) 1.5 * temp2 * betal * x3thm1)
-			+ (real) 0.5 * temp1 * x1mth2 * cos2u;
-	uk = u - (real) 0.25 * temp2 * x7thm1 * sin2u;
-	xnodek = xnode + (real) 1.5 * temp2 * cosIO * sin2u;
-	xinck = xinc + (real) 1.5 * temp2 * cosIO * sinIO * cos2u;
+    rk = r * ((real) 1.0 - (real) 1.5 * temp2 * betal * x3thm1)
+            + (real) 0.5 * temp1 * x1mth2 * cos2u;
+    uk = u - (real) 0.25 * temp2 * x7thm1 * sin2u;
+    xnodek = xnode + (real) 1.5 * temp2 * cosIO * sin2u;
+    xinck = xinc + (real) 1.5 * temp2 * cosIO * sinIO * cos2u;
 
-	if (rk < (real) 1.0) {
-		return SGP4_ERROR;
-	}
+    if (rk < (real) 1.0) {
+        return SGP4_ERROR;
+    }
 
-	kep->radius = rk * XKMPER / AE; /* Into km */
-	kep->theta = uk;
-	kep->eqinc = xinck;
-	kep->ascn = xnodek;
-	kep->argp = omega;
-	kep->smjaxs = a * XKMPER / AE;
+    kep->radius = rk * XKMPER / AE; /* Into km */
+    kep->theta = uk;
+    kep->eqinc = xinck;
+    kep->ascn = xnodek;
+    kep->argp = omega;
+    kep->smjaxs = a * XKMPER / AE;
 
-	/* Short period velocity terms ?. */
-	if (withvel) {
-		/* xn = XKE / pow(a, 1.5); */
-		temp0 = SQRT(a);
-		temp2 = (real) XKE / (a * temp0);
+    /* Short period velocity terms ?. */
+    if (withvel) {
+        /* xn = XKE / pow(a, 1.5); */
+        temp0 = SQRT(a);
+        temp2 = (real) XKE / (a * temp0);
 
-		kep->rdotk = ((real) XKE * temp0 * esinE * invR
-				- temp2 * temp1 * x1mth2 * sin2u)
-				* (XKMPER / AE * XMNPDA / 86400.0); /* Into km/sec */
+        kep->rdotk = ((real) XKE * temp0 * esinE * invR
+                - temp2 * temp1 * x1mth2 * sin2u)
+                * (XKMPER / AE * XMNPDA / 86400.0); /* Into km/sec */
 
-		kep->rfdotk = ((real) XKE * SQRT(pl) * invR
-				+ temp2 * temp1 * (x1mth2 * cos2u + (real) 1.5 * x3thm1))
-				* (XKMPER / AE * XMNPDA / 86400.0);
-	} else {
-		kep->rdotk = kep->rfdotk = 0;
-	}
+        kep->rfdotk = ((real) XKE * SQRT(pl) * invR
+                + temp2 * temp1 * (x1mth2 * cos2u + (real) 1.5 * x3thm1))
+                * (XKMPER / AE * XMNPDA / 86400.0);
+    } else {
+        kep->rdotk = kep->rfdotk = 0;
+    }
 
 #ifndef SGP4_SNGL
 #undef ts
 #endif
 
-	return imode;
+    return imode;
 }
 
 /* ====================================================================
@@ -1083,40 +1080,40 @@ static int sgp4(double tsince, int withvel, kep_t *kep) {
  ==================================================================== */
 
 static void kep2xyz(kep_t *K, xyz_t *pos, xyz_t *vel) {
-	real xmx, xmy;
-	real ux, uy, uz, vx, vy, vz;
-	real sinT, cosT, sinI, cosI, sinS, cosS;
+    real xmx, xmy;
+    real ux, uy, uz, vx, vy, vz;
+    real sinT, cosT, sinI, cosI, sinS, cosS;
 
-	/* Orientation vectors for X-Y-Z format. */
+    /* Orientation vectors for X-Y-Z format. */
 
-	SINCOS((real) K->theta, &sinT, &cosT);
-	SINCOS((real) K->eqinc, &sinI, &cosI);
-	SINCOS((real) K->ascn, &sinS, &cosS);
+    SINCOS((real) K->theta, &sinT, &cosT);
+    SINCOS((real) K->eqinc, &sinI, &cosI);
+    SINCOS((real) K->ascn, &sinS, &cosS);
 
-	xmx = -sinS * cosI;
-	xmy = cosS * cosI;
+    xmx = -sinS * cosI;
+    xmy = cosS * cosI;
 
-	ux = xmx * sinT + cosS * cosT;
-	uy = xmy * sinT + sinS * cosT;
-	uz = sinI * sinT;
+    ux = xmx * sinT + cosS * cosT;
+    uy = xmy * sinT + sinS * cosT;
+    uz = sinI * sinT;
 
-	/* Position and velocity */
+    /* Position and velocity */
 
-	if (pos != NULL) {
-		pos->x = K->radius * ux;
-		pos->y = K->radius * uy;
-		pos->z = K->radius * uz;
-	}
+    if (pos != NULL) {
+        pos->x = K->radius * ux;
+        pos->y = K->radius * uy;
+        pos->z = K->radius * uz;
+    }
 
-	if (vel != NULL) {
-		vx = xmx * cosT - cosS * sinT;
-		vy = xmy * cosT - sinS * sinT;
-		vz = sinI * cosT;
+    if (vel != NULL) {
+        vx = xmx * cosT - cosS * sinT;
+        vy = xmy * cosT - sinS * sinT;
+        vz = sinI * cosT;
 
-		vel->x = K->rdotk * ux + K->rfdotk * vx;
-		vel->y = K->rdotk * uy + K->rfdotk * vy;
-		vel->z = K->rdotk * uz + K->rfdotk * vz;
-	}
+        vel->x = K->rdotk * ux + K->rfdotk * vx;
+        vel->y = K->rdotk * uy + K->rfdotk * vy;
+        vel->z = K->rdotk * uz + K->rfdotk * vz;
+    }
 
 }
 
@@ -1146,11 +1143,11 @@ static void kep2xyz(kep_t *K, xyz_t *pos, xyz_t *vel) {
  *       ----------------------------------------------------------------      */
 
 static double sgn(double x) {
-	if (x < 0.0) {
-		return -1.0;
-	} else {
-		return 1.0;
-	}
+    if (x < 0.0) {
+        return -1.0;
+    } else {
+        return 1.0;
+    }
 
 }  // end sgn
 
@@ -1177,7 +1174,7 @@ static double sgn(double x) {
  * --------------------------------------------------------------------------- */
 
 static double mag(double x[3]) {
-	return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+    return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
 }  // end mag
 
 /* -----------------------------------------------------------------------------
@@ -1203,9 +1200,9 @@ static double mag(double x[3]) {
  ---------------------------------------------------------------------------- */
 
 static void cross(double vec1[3], double vec2[3], double outvec[3]) {
-	outvec[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
-	outvec[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
-	outvec[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
+    outvec[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
+    outvec[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
+    outvec[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
 }  // end cross
 
 /* -----------------------------------------------------------------------------
@@ -1232,7 +1229,7 @@ static void cross(double vec1[3], double vec2[3], double outvec[3]) {
  * --------------------------------------------------------------------------- */
 
 static double dot(double x[3], double y[3]) {
-	return (x[0] * y[0] + x[1] * y[1] + x[2] * y[2]);
+    return (x[0] * y[0] + x[1] * y[1] + x[2] * y[2]);
 }  // end dot
 
 /* -----------------------------------------------------------------------------
@@ -1260,20 +1257,20 @@ static double dot(double x[3], double y[3]) {
  * --------------------------------------------------------------------------- */
 
 static double angle(double vec1[3], double vec2[3]) {
-	double small, undefined, magv1, magv2, temp;
-	small = 0.00000001;
-	undefined = 999999.1;
+    double small, undefined, magv1, magv2, temp;
+    small = 0.00000001;
+    undefined = 999999.1;
 
-	magv1 = mag(vec1);
-	magv2 = mag(vec2);
+    magv1 = mag(vec1);
+    magv2 = mag(vec2);
 
-	if (magv1 * magv2 > small * small) {
-		temp = dot(vec1, vec2) / (magv1 * magv2);
-		if (fabs(temp) > 1.0)
-			temp = sgn(temp) * 1.0;
-		return acos(temp);
-	} else
-		return undefined;
+    if (magv1 * magv2 > small * small) {
+        temp = dot(vec1, vec2) / (magv1 * magv2);
+        if (fabs(temp) > 1.0)
+            temp = sgn(temp) * 1.0;
+        return acos(temp);
+    } else
+        return undefined;
 }  // end angle
 
 /* -----------------------------------------------------------------------------
@@ -1299,7 +1296,7 @@ static double angle(double vec1[3], double vec2[3]) {
  * --------------------------------------------------------------------------- */
 
 static double sgp4_asinh(double xval) {
-	return log(xval + sqrt(xval * xval + 1.0));
+    return log(xval + sqrt(xval * xval + 1.0));
 }  // end sgp4_asinh
 
 /* -----------------------------------------------------------------------------
@@ -1338,45 +1335,45 @@ static double sgp4_asinh(double xval) {
  * --------------------------------------------------------------------------- */
 
 static void newtonnu(double ecc, double nu, double *e0, double *m) {
-	double small, sine, cose;
+    double small, sine, cose;
 
-	/* ---------------------  implementation   --------------------- */
-	*e0 = 999999.9;
-	*m = 999999.9;
-	small = 0.00000001;
+    /* ---------------------  implementation   --------------------- */
+    *e0 = 999999.9;
+    *m = 999999.9;
+    small = 0.00000001;
 
-	/* --------------------------- circular ------------------------ */
-	if (fabs(ecc) < small) {
-		*m = nu;
-		*e0 = nu;
-	}
-	/* ---------------------- elliptical ----------------------- */
-	else if (ecc < 1.0 - small) {
-		sine = (sqrt(1.0 - ecc * ecc) * sin(nu)) / (1.0 + ecc * cos(nu));
-		cose = (ecc + cos(nu)) / (1.0 + ecc * cos(nu));
-		*e0 = atan2(sine, cose);
-		*m = *e0 - ecc * sin(*e0);
-	}
-	/* -------------------- hyperbolic  -------------------- */
-	else if (ecc > 1.0 + small) {
-		if ((ecc > 1.0) && (fabs(nu) + 0.00001 < PI - acos(1.0 / ecc))) {
-			sine = (sqrt(ecc * ecc - 1.0) * sin(nu)) / (1.0 + ecc * cos(nu));
-			*e0 = sgp4_asinh(sine);
-			*m = ecc * sinh(*e0) - *e0;
-		}
-	}
-	/* ----------------- parabolic --------------------- */
-	else if (fabs(nu) < 168.0 * DEG2RAD) {
-		*e0 = tan(nu * 0.5);
-		*m = *e0 + (*e0 * *e0 * *e0) / 3.0;
-	}
+    /* --------------------------- circular ------------------------ */
+    if (fabs(ecc) < small) {
+        *m = nu;
+        *e0 = nu;
+    }
+    /* ---------------------- elliptical ----------------------- */
+    else if (ecc < 1.0 - small) {
+        sine = (sqrt(1.0 - ecc * ecc) * sin(nu)) / (1.0 + ecc * cos(nu));
+        cose = (ecc + cos(nu)) / (1.0 + ecc * cos(nu));
+        *e0 = atan2(sine, cose);
+        *m = *e0 - ecc * sin(*e0);
+    }
+    /* -------------------- hyperbolic  -------------------- */
+    else if (ecc > 1.0 + small) {
+        if ((ecc > 1.0) && (fabs(nu) + 0.00001 < PI - acos(1.0 / ecc))) {
+            sine = (sqrt(ecc * ecc - 1.0) * sin(nu)) / (1.0 + ecc * cos(nu));
+            *e0 = sgp4_asinh(sine);
+            *m = ecc * sinh(*e0) - *e0;
+        }
+    }
+    /* ----------------- parabolic --------------------- */
+    else if (fabs(nu) < 168.0 * DEG2RAD) {
+        *e0 = tan(nu * 0.5);
+        *m = *e0 + (*e0 * *e0 * *e0) / 3.0;
+    }
 
-	if (ecc < 1.0) {
-		*m = fmod(*m, 2.0 * PI);
-		if (*m < 0.0)
-			*m = *m + 2.0 * PI;
-		*e0 = fmod(*e0, 2.0 * PI);
-	}
+    if (ecc < 1.0) {
+        *m = fmod(*m, 2.0 * PI);
+        if (*m < 0.0)
+            *m = *m + 2.0 * PI;
+        *e0 = fmod(*e0, 2.0 * PI);
+    }
 } /* end newtonnu */
 
 /* -----------------------------------------------------------------------------
@@ -1437,141 +1434,141 @@ static void newtonnu(double ecc, double nu, double *e0, double *m) {
  * --------------------------------------------------------------------------- */
 
 static void rv2coe(double r[3], double v[3], double mu, double *p, double *a,
-		double *ecc, double *incl, double *omega, double *argp, double *nu,
-		double *m, double *arglat, double *truelon, double *lonper) {
-	double undefined, small, hbar[3], nbar[3], magr, magv, magn, ebar[3], sme,
-			rdotv, infinite, temp, c1, hk, magh, e;
+        double *ecc, double *incl, double *omega, double *argp, double *nu,
+        double *m, double *arglat, double *truelon, double *lonper) {
+    double undefined, small, hbar[3], nbar[3], magr, magv, magn, ebar[3], sme,
+            rdotv, infinite, temp, c1, hk, magh, e;
 
-	int i;
-	char typeorbit[3];
+    int i;
+    char typeorbit[3];
 
-	small = 0.00000001;
-	undefined = 999999.1;
-	infinite = 999999.9;
+    small = 0.00000001;
+    undefined = 999999.1;
+    infinite = 999999.9;
 
 // -------------------------  implementation   -----------------
-	magr = mag(r);
-	magv = mag(v);
+    magr = mag(r);
+    magv = mag(v);
 
 // ------------------  find h n and e vectors   ----------------
-	cross(r, v, hbar);
-	magh = mag(hbar);
-	if (magh > small) {
-		nbar[0] = -hbar[1];
-		nbar[1] = hbar[0];
-		nbar[2] = 0.0;
-		magn = mag(nbar);
-		c1 = magv * magv - mu / magr;
-		rdotv = dot(r, v);
-		for (i = 0; i <= 2; i++)
-			ebar[i] = (c1 * r[i] - rdotv * v[i]) / mu;
-		*ecc = mag(ebar);
+    cross(r, v, hbar);
+    magh = mag(hbar);
+    if (magh > small) {
+        nbar[0] = -hbar[1];
+        nbar[1] = hbar[0];
+        nbar[2] = 0.0;
+        magn = mag(nbar);
+        c1 = magv * magv - mu / magr;
+        rdotv = dot(r, v);
+        for (i = 0; i <= 2; i++)
+            ebar[i] = (c1 * r[i] - rdotv * v[i]) / mu;
+        *ecc = mag(ebar);
 
-		// ------------  find a e and semi-latus rectum   ----------
-		sme = (magv * magv * 0.5) - (mu / magr);
-		if (fabs(sme) > small)
-			*a = -mu / (2.0 * sme);
-		else
-			*a = infinite;
-		*p = magh * magh / mu;
+        // ------------  find a e and semi-latus rectum   ----------
+        sme = (magv * magv * 0.5) - (mu / magr);
+        if (fabs(sme) > small)
+            *a = -mu / (2.0 * sme);
+        else
+            *a = infinite;
+        *p = magh * magh / mu;
 
-		// -----------------  find inclination   -------------------
-		hk = hbar[2] / magh;
-		*incl = acos(hk);
+        // -----------------  find inclination   -------------------
+        hk = hbar[2] / magh;
+        *incl = acos(hk);
 
-		// --------  determine type of orbit for later use  --------
-		// ------ elliptical, parabolic, hyperbolic inclined -------
-		strcpy(typeorbit, "ei");
-		if (*ecc < small) {
-			// ----------------  circular equatorial ---------------
-			if ((*incl < small) | (fabs(*incl - PI) < small))
-				strcpy(typeorbit, "ce");
-			else
-				// --------------  circular inclined ---------------
-				strcpy(typeorbit, "ci");
-		} else {
-			// - elliptical, parabolic, hyperbolic equatorial --
-			if ((*incl < small) | (fabs(*incl - PI) < small))
-				strcpy(typeorbit, "ee");
-		}
+        // --------  determine type of orbit for later use  --------
+        // ------ elliptical, parabolic, hyperbolic inclined -------
+        strcpy(typeorbit, "ei");
+        if (*ecc < small) {
+            // ----------------  circular equatorial ---------------
+            if ((*incl < small) | (fabs(*incl - PI) < small))
+                strcpy(typeorbit, "ce");
+            else
+                // --------------  circular inclined ---------------
+                strcpy(typeorbit, "ci");
+        } else {
+            // - elliptical, parabolic, hyperbolic equatorial --
+            if ((*incl < small) | (fabs(*incl - PI) < small))
+                strcpy(typeorbit, "ee");
+        }
 
-		// ----------  find longitude of ascending node ------------
-		if (magn > small) {
-			temp = nbar[0] / magn;
-			if (fabs(temp) > 1.0)
-				temp = sgn(temp);
-			*omega = acos(temp);
-			if (nbar[1] < 0.0)
-				*omega = TWOPI - *omega;
-		} else
-			*omega = undefined;
+        // ----------  find longitude of ascending node ------------
+        if (magn > small) {
+            temp = nbar[0] / magn;
+            if (fabs(temp) > 1.0)
+                temp = sgn(temp);
+            *omega = acos(temp);
+            if (nbar[1] < 0.0)
+                *omega = TWOPI - *omega;
+        } else
+            *omega = undefined;
 
-		// ---------------- find argument of perigee ---------------
-		if (strcmp(typeorbit, "ei") == 0) {
-			*argp = angle(nbar, ebar);
-			if (ebar[2] < 0.0)
-				*argp = TWOPI - *argp;
-		} else
-			*argp = undefined;
+        // ---------------- find argument of perigee ---------------
+        if (strcmp(typeorbit, "ei") == 0) {
+            *argp = angle(nbar, ebar);
+            if (ebar[2] < 0.0)
+                *argp = TWOPI - *argp;
+        } else
+            *argp = undefined;
 
-		// ------------  find true anomaly at epoch    -------------
-		if (typeorbit[0] == 'e') {
-			*nu = angle(ebar, r);
-			if (rdotv < 0.0)
-				*nu = TWOPI - *nu;
-		} else
-			*nu = undefined;
+        // ------------  find true anomaly at epoch    -------------
+        if (typeorbit[0] == 'e') {
+            *nu = angle(ebar, r);
+            if (rdotv < 0.0)
+                *nu = TWOPI - *nu;
+        } else
+            *nu = undefined;
 
-		// ----  find argument of latitude - circular inclined -----
-		if (strcmp(typeorbit, "ci") == 0) {
-			*arglat = angle(nbar, r);
-			if (r[2] < 0.0)
-				*arglat = TWOPI - *arglat;
-			*m = *arglat;
-		} else
-			*arglat = undefined;
+        // ----  find argument of latitude - circular inclined -----
+        if (strcmp(typeorbit, "ci") == 0) {
+            *arglat = angle(nbar, r);
+            if (r[2] < 0.0)
+                *arglat = TWOPI - *arglat;
+            *m = *arglat;
+        } else
+            *arglat = undefined;
 
-		// -- find longitude of perigee - elliptical equatorial ----
-		if ((*ecc > small) && (strcmp(typeorbit, "ee") == 0)) {
-			temp = ebar[0] / *ecc;
-			if (fabs(temp) > 1.0)
-				temp = sgn(temp);
-			*lonper = acos(temp);
-			if (ebar[1] < 0.0)
-				*lonper = TWOPI - *lonper;
-			if (*incl > HALFPI)
-				*lonper = TWOPI - *lonper;
-		} else
-			*lonper = undefined;
+        // -- find longitude of perigee - elliptical equatorial ----
+        if ((*ecc > small) && (strcmp(typeorbit, "ee") == 0)) {
+            temp = ebar[0] / *ecc;
+            if (fabs(temp) > 1.0)
+                temp = sgn(temp);
+            *lonper = acos(temp);
+            if (ebar[1] < 0.0)
+                *lonper = TWOPI - *lonper;
+            if (*incl > HALFPI)
+                *lonper = TWOPI - *lonper;
+        } else
+            *lonper = undefined;
 
-		// -------- find true longitude - circular equatorial ------
-		if ((magr > small) && (strcmp(typeorbit, "ce") == 0)) {
-			temp = r[0] / magr;
-			if (fabs(temp) > 1.0)
-				temp = sgn(temp);
-			*truelon = acos(temp);
-			if (r[1] < 0.0)
-				*truelon = TWOPI - *truelon;
-			if (*incl > HALFPI)
-				*truelon = TWOPI - *truelon;
-			*m = *truelon;
-		} else
-			*truelon = undefined;
+        // -------- find true longitude - circular equatorial ------
+        if ((magr > small) && (strcmp(typeorbit, "ce") == 0)) {
+            temp = r[0] / magr;
+            if (fabs(temp) > 1.0)
+                temp = sgn(temp);
+            *truelon = acos(temp);
+            if (r[1] < 0.0)
+                *truelon = TWOPI - *truelon;
+            if (*incl > HALFPI)
+                *truelon = TWOPI - *truelon;
+            *m = *truelon;
+        } else
+            *truelon = undefined;
 
-		// ------------ find mean anomaly for all orbits -----------
-		if (typeorbit[0] == 'e')
-			newtonnu(*ecc, *nu, &e, m);
-	} else {
-		*p = undefined;
-		*a = undefined;
-		*ecc = undefined;
-		*incl = undefined;
-		*omega = undefined;
-		*argp = undefined;
-		*nu = undefined;
-		*m = undefined;
-		*arglat = undefined;
-		*truelon = undefined;
-		*lonper = undefined;
-	}
+        // ------------ find mean anomaly for all orbits -----------
+        if (typeorbit[0] == 'e')
+            newtonnu(*ecc, *nu, &e, m);
+    } else {
+        *p = undefined;
+        *a = undefined;
+        *ecc = undefined;
+        *incl = undefined;
+        *omega = undefined;
+        *argp = undefined;
+        *nu = undefined;
+        *m = undefined;
+        *arglat = undefined;
+        *truelon = undefined;
+        *lonper = undefined;
+    }
 }  // end rv2coe

@@ -1,5 +1,5 @@
 /*
- * adcs_common.h
+ * adcs_switch.h
  *
  *  Created on: Jun 17, 2016
  *      Author: azisi
@@ -9,16 +9,16 @@
 #define INC_ADCS_SWITCH_H_
 
 typedef enum {
-	SWITCH_ON = 1, SWITCH_OFF
+    SWITCH_ON = 0, SWITCH_OFF
 } _switch_state;
 
 typedef enum {
-	SENSORS = 1, GPS
+    SENSORS = 0, GPS
 } _adcs_switch;
 
 typedef struct {
-	_switch_state sens_sw;
-	_switch_state gps_sw;
+    _switch_state sens_sw;
+    _switch_state gps_sw;
 } _adcs_switch_state;
 
 extern _adcs_switch_state adcs_switch_state;

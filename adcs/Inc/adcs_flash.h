@@ -9,7 +9,7 @@
 #define ADCS_FLASH_H_
 
 typedef enum {
-	FLASH_ERROR = 0, FLASH_NORMAL
+    FLASH_ERROR = 0, FLASH_NORMAL
 } flash_status;
 
 flash_status flash_init();

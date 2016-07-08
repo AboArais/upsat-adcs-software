@@ -7,13 +7,13 @@
 _sun_vector sun_vector;
 
 void init_sun(_sun_vector *sStr) {
-	sStr->JD_epoch = 0;
-	sStr->sun_pos.x = 0;
-	sStr->sun_pos.y = 0;
-	sStr->sun_pos.z = 0;
-	sStr->norm = 0;
-	sStr->decl = 0;
-	sStr->rtasc = 0;
+    sStr->JD_epoch = 0;
+    sStr->sun_pos.x = 0;
+    sStr->sun_pos.y = 0;
+    sStr->sun_pos.z = 0;
+    sStr->norm = 0;
+    sStr->decl = 0;
+    sStr->rtasc = 0;
 }
 
 /* ------------------------------------------------------------------------------
@@ -63,47 +63,48 @@ void init_sun(_sun_vector *sStr) {
  * --------------------------------------------------------------------------- */
 
 void sun(_sun_vector *sStr) {
-	double tut1, meanlong, ttdb, meananomaly, eclplong, obliquity, magr;
+    double tut1, meanlong, ttdb, meananomaly, eclplong, obliquity, magr;
 
-	// -------------------------  implementation   -----------------
-	// -------------------  initialize values   --------------------
-	tut1 = (sStr->JD_epoch - 2451545.0) / 36525.0;
+    // -------------------------  implementation   -----------------
+    // -------------------  initialize values   --------------------
+    tut1 = (sStr->JD_epoch - 2451545.0) / 36525.0;
 
-	meanlong = 280.460 + 36000.77 * tut1;
-	meanlong = fmod(meanlong, 360.0); //deg
+    meanlong = 280.460 + 36000.77 * tut1;
+    meanlong = fmod(meanlong, 360.0); //deg
 
-	ttdb = tut1;
-	meananomaly = 357.5277233 + 35999.05034 * ttdb;
-	meananomaly = fmod(meananomaly * DEG2RAD, TWOPI); //rad
-	if (meananomaly < 0.0) {
-		meananomaly = TWOPI + meananomaly;
-	}
-	eclplong = meanlong + 1.914666471 * sin(meananomaly)
-			+ 0.019994643 * sin(2.0 * meananomaly); //deg
-	obliquity = 23.439291 - 0.0130042 * ttdb; //deg
-	meanlong = meanlong * DEG2RAD;
-	if (meanlong < 0.0) {
-		meanlong = TWOPI + meanlong;
-	}
-	eclplong = eclplong * DEG2RAD;
-	obliquity = obliquity * DEG2RAD;
+    ttdb = tut1;
+    meananomaly = 357.5277233 + 35999.05034 * ttdb;
+    meananomaly = fmod(meananomaly * DEG2RAD, TWOPI); //rad
+    if (meananomaly < 0.0) {
+        meananomaly = TWOPI + meananomaly;
+    }
+    eclplong = meanlong + 1.914666471 * sin(meananomaly)
+            + 0.019994643 * sin(2.0 * meananomaly); //deg
+    obliquity = 23.439291 - 0.0130042 * ttdb; //deg
+    meanlong = meanlong * DEG2RAD;
+    if (meanlong < 0.0) {
+        meanlong = TWOPI + meanlong;
+    }
+    eclplong = eclplong * DEG2RAD;
+    obliquity = obliquity * DEG2RAD;
 
-	// --------- find magnitude of sun vector, )   components ------
-	magr = 1.000140612 - 0.016708617 * cos(meananomaly)
-			- 0.000139589 * cos(2.0 * meananomaly); // in au's
+    // --------- find magnitude of sun vector, )   components ------
+    magr = 1.000140612 - 0.016708617 * cos(meananomaly)
+            - 0.000139589 * cos(2.0 * meananomaly); // in au's
 
-	sStr->sun_pos.x = magr * cos(eclplong);
-	sStr->sun_pos.y = magr * cos(obliquity) * sin(eclplong);
-	sStr->sun_pos.z = magr * sin(obliquity) * sin(eclplong);
+    sStr->sun_pos.x = magr * cos(eclplong);
+    sStr->sun_pos.y = magr * cos(obliquity) * sin(eclplong);
+    sStr->sun_pos.z = magr * sin(obliquity) * sin(eclplong);
 
-	sStr->rtasc = atan(cos(obliquity) * tan(eclplong));
+    sStr->rtasc = atan(cos(obliquity) * tan(eclplong));
 
-	// --- check that rtasc is in the same quadrant as eclplong ----
-	if (eclplong < 0.0) {
-		eclplong = eclplong + TWOPI;    // make sure it's in 0 to 2pi range
-	}
-	if ((abs(eclplong - sStr->rtasc)) > PI * 0.5) {
-		sStr->rtasc = sStr->rtasc + 0.5 * PI * round((eclplong - sStr->rtasc) / (0.5 * PI));
-	}
-	sStr->decl = asin(sin(obliquity) * sin(eclplong));
+    // --- check that rtasc is in the same quadrant as eclplong ----
+    if (eclplong < 0.0) {
+        eclplong = eclplong + TWOPI;    // make sure it's in 0 to 2pi range
+    }
+    if ((abs(eclplong - sStr->rtasc)) > PI * 0.5) {
+        sStr->rtasc = sStr->rtasc
+                + 0.5 * PI * round((eclplong - sStr->rtasc) / (0.5 * PI));
+    }
+    sStr->decl = asin(sin(obliquity) * sin(eclplong));
 }

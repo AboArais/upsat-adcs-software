@@ -9,15 +9,15 @@
 #define INC_ADCS_FRAME_H_
 
 typedef struct {
-	double x;
-	double y;
-	double z;
+    double x;
+    double y;
+    double z;
 } xyz_t;
 
 typedef struct {
-	double lat;
-	double lon;
-	double alt;
+    double lat;
+    double lon;
+    double alt;
 } llh_t;
 
 void WGS842ECEF();

@@ -8,18 +8,18 @@
 #define GEOMAG_H_
 
 typedef struct {
-	double sdate;
-	double latitude;
-	double longitude;
-	double alt;
-	double Xm;
-	double Ym;
-	double Zm;
-	double norm;
-	double decl;
-	double incl;
-	double h;
-	double f;
+    double sdate;
+    double latitude;
+    double longitude;
+    double alt;
+    double Xm;
+    double Ym;
+    double Zm;
+    double norm;
+    double decl;
+    double incl;
+    double h;
+    double f;
 } geomag_vector;
 
 extern geomag_vector igrf_vector;
