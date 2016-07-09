@@ -113,12 +113,10 @@ void adcs_debug();
 /* USER CODE BEGIN 0 */
 
 //ToDo
-//  Read/Write TLE in stm-flash or external flash
-//  GPS sentences parser
+//  Read/Write TLE in external flash
 //  Time stamps for GPS or RTC alarm (on-off to update TLE-Time)
 //
 //  Add limits to measurement vectors in raw values
-//  Add other state to sensors available, not available
 //  Temperature compensate in gyroscope
 //  Temperature compensate in magnetometer
 //  Cancel soft and hard iron effects in magnetometer
@@ -128,7 +126,7 @@ void adcs_debug();
 //  Change magnetometers by comparing normalize values
 //  Add moving average filter in sensors
 //  Tune time-out of all devices
-//  Convert measurement vectors to body frame (Sun to xyz)
+//  Convert measurement vectors to body frame
 //  Calculate fine sun sensor values
 //
 //  Convert WGS-84(GPS) to ECEF
@@ -141,7 +139,6 @@ void adcs_debug();
 //  Software error handling
 //  Read TLE from OBC serial
 //  Get time from OBC at the start or after reset
-//  Send to OBC time from GPS
 //  Read/Write to OBC sensors values, controller gains
 //  Send notification to OBC for critical events
 /* USER CODE END 0 */
@@ -178,8 +175,29 @@ int main(void) {
     /* USER CODE BEGIN 2 */
     HAL_Delay(1000);
 
-    /* Kick timer interrupt for timed threads */
-//	kick_TIM7_timed_interrupt(LOOP_TIME);
+    /* ecss */
+    uint8_t rsrc = 0;
+    HAL_reset_source(&rsrc);
+    set_reset_source(rsrc);
+    pkt_pool_INIT();
+    uint16_t size = 0;
+    event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
+    HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+    event_dbg_api(uart_temp, "ADCS STARTED\n", &size);
+    HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+    HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
+
+    /* Get time from OBC */
+//  time_management_request_time_in_utc(OBC_APP_ID);
+    adcs_time.utc.year = 16;
+    adcs_time.utc.month = 7;
+    adcs_time.utc.day = 7;
+    adcs_time.utc.weekday = RTC_WEEKDAY_MONDAY;
+    adcs_time.utc.hour = 20;
+    adcs_time.utc.min = 30;
+    adcs_time.utc.sec = 0;
+    set_time_UTC(adcs_time.utc);
+
     /* Switch ON sensors-GPS */
     adcs_pwr_switch(SWITCH_ON, SENSORS);
     adcs_pwr_switch(SWITCH_ON, GPS);
@@ -207,68 +225,33 @@ int main(void) {
     /* Initialize SGP4 and TLE read */
     orbit_t temp_tle;
     /* Read tle from flash */
-    sprintf(tle_string,
-            "1 25544U 98067A   16137.55001157  .00005721  00000-0  91983-4 0  9991\n2 25544  51.6440 215.8562 0001995 108.3968  92.4187 15.54614828    61");
+    sprintf(tle_string, "1 25544U 98067A   16137.55001157  .00005721  00000-0  91983-4 0  9991\n2 25544  51.6440 215.8562 0001995 108.3968  92.4187 15.54614828    61");
     temp_tle = read_tle(tle_string);
     update_tle(&upsat_tle, temp_tle);
-    p_eci.x = 0;
-    p_eci.y = 0;
-    p_eci.z = 0;
-    v_eci.x = 0;
-    v_eci.y = 0;
-    v_eci.y = 0;
+    p_eci.x = 0; p_eci.y = 0; p_eci.z = 0;
+    v_eci.x = 0; v_eci.y = 0; v_eci.y = 0;
 
     /* Initialize IGRF model */
     xyz_t p_ecef;
     llh_t p_ecef_llh;
-    p_ecef.x = 0;
-    p_ecef.y = 0;
-    p_ecef.z = 0;
-    p_ecef_llh.lat = 0;
-    p_ecef_llh.lon = 0;
-    p_ecef_llh.alt = 0;
+    p_ecef.x = 0; p_ecef.y = 0; p_ecef.z = 0;
+    p_ecef_llh.lat = 0; p_ecef_llh.lon = 0; p_ecef_llh.alt = 0;
     init_geomag(&igrf_vector);
 
     /* Initialize Sun position model */
     init_sun(&sun_vector);
     xyz_t sun_ned_vector;
-    sun_ned_vector.x = 0;
-    sun_ned_vector.y = 0;
-    sun_ned_vector.z = 0;
+    sun_ned_vector.x = 0; sun_ned_vector.y = 0; sun_ned_vector.z = 0;
 
     /* Initialize Attitude determination */
     initWahbaStruct(&WahbaRot, LOOP_TIME);
 
-    /* ecss */
-    uint8_t rsrc = 0;
-    HAL_reset_source(&rsrc);
-    set_reset_source(rsrc);
-    pkt_pool_INIT();
-    uint16_t size = 0;
-    event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
-    HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-    event_dbg_api(uart_temp, "ADCS STARTED\n", &size);
-    HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-    HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
-
-    /* Get time from OBC */
-//	time_management_request_time_in_utc(OBC_APP_ID);
-    adcs_time.utc.year = 16;
-    adcs_time.utc.month = 7;
-    adcs_time.utc.day = 7;
-    adcs_time.utc.hour = 20;
-    adcs_time.utc.min = 30;
-    adcs_time.utc.sec = 0;
-    set_time_UTC(adcs_time.utc);
-
     /* Refresh WDC timer */
     HAL_IWDG_Refresh(&hiwdg);
 
-//	/* Init for external flash */
-//	uint8_t flash_tmp = 0;
-//	flash_init();
-//	flash_write_enable();
-//	HAL_Delay(500);
+    /* Kick timer interrupt for timed threads in usec */
+    ADCS_event_period_status = TIMED_EVENT_SERVICED;
+    kick_TIM7_timed_interrupt(LOOP_TIME_TICKS);
 
     /* USER CODE END 2 */
 
@@ -276,73 +259,8 @@ int main(void) {
     /* USER CODE BEGIN WHILE */
     while (1) {
 
-        t0_stamp = HAL_GetTick();
-
         import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
         export_pkt(OBC_APP_ID, &adcs_data.obc_uart);
-
-        /* Get time for RTC*/
-        get_time_UTC(&adcs_time.utc);
-        if (adcs_time.utc.year == 24) {
-            adcs_time.utc.year = 16;
-        }
-        if (adcs_time.utc.year == 25) {
-            adcs_time.utc.year = 16;
-        }
-        decyear(&adcs_time);
-        julday(&adcs_time);
-
-        /* Calculate measurement vectors */
-        update_adt7420(&adcs_sensors);
-        update_sun_sensor(&adcs_sensors);
-        // Put filter here
-        update_lsm9ds0_gyro(&adcs_sensors);
-        update_rm3100(&adcs_sensors);
-        update_lsm9ds0_xm(&adcs_sensors);
-
-        /* Set actuators */
-        update_spin_torquer(&adcs_actuator);
-        update_magneto_torquer(&adcs_actuator);
-
-        /* Update position and velocity of satellite */
-        satpos_xyz(adcs_time.jd, &p_eci, &v_eci); // return sgp4 status
-
-        /* Calculate reference vectors */
-        ECI2ECEF(adcs_time.jd, p_eci, &p_ecef);
-        cart2spher(p_ecef, &p_ecef_llh);
-        igrf_vector.sdate = adcs_time.decyear;
-        igrf_vector.latitude = p_ecef_llh.lat;
-        igrf_vector.longitude = p_ecef_llh.lon;
-        igrf_vector.alt = p_ecef_llh.alt;
-        geomag(&igrf_vector); // Return igrf status, Xm,Ym,Zm in NED
-        igrf_vector.norm = norm(igrf_vector.Xm, igrf_vector.Ym, igrf_vector.Zm);
-        igrf_vector.Xm = igrf_vector.Xm / igrf_vector.norm;
-        igrf_vector.Ym = igrf_vector.Ym / igrf_vector.norm;
-        igrf_vector.Zm = igrf_vector.Zm / igrf_vector.norm;
-
-        sun_vector.JD_epoch = adcs_time.jd;
-        sun(&sun_vector); // Sun position in ECI
-        ECI2NED(sun_vector.sun_pos, &sun_ned_vector, upsat_tle.ascn,
-                upsat_tle.eqinc, upsat_tle.argp + upsat_tle.mnan); // Convert to NED
-        sun_vector.norm = norm(sun_ned_vector.x, sun_ned_vector.y,
-                sun_ned_vector.z);
-        sun_ned_vector.x = sun_ned_vector.x / sun_vector.norm;
-        sun_ned_vector.y = sun_ned_vector.y / sun_vector.norm;
-        sun_ned_vector.z = sun_ned_vector.z / sun_vector.norm;
-
-        /* Attitude determination */
-        // Set reference vectors
-        WahbaRot.w_m[0] = igrf_vector.Xm;
-        WahbaRot.w_m[1] = igrf_vector.Ym;
-        WahbaRot.w_m[2] = igrf_vector.Zm;
-
-        WahbaRot.w_a[0] = sun_ned_vector.x;
-        WahbaRot.w_a[1] = sun_ned_vector.y;
-        WahbaRot.w_a[2] = sun_ned_vector.z;
-
-        WahbaRotM(adcs_sensors.sun_sensor.sun_xyz,
-                adcs_sensors.lsm9ds0_sensor.gyr,
-                adcs_sensors.magn_sensor.rm_mag, &WahbaRot);
 
         /* Take GPS sentences and update TLE-Time */
         // set adcs RTC with updated GPS time
@@ -352,22 +270,89 @@ int main(void) {
         // flash_erase_block4K(0x0);
         // flash_write_byte(0x35, 0x0);
         // flash_read_byte(&flash_tmp, 0x0);
-        /* Control Law */
-        adcs_actuator.magneto_torquer.current_x = 0;
-        adcs_actuator.magneto_torquer.current_y = 0;
-        adcs_actuator.spin_torquer.RPM = 0;
+
+        if (ADCS_event_period_status == TIMED_EVENT_NOT_SERVICED) {
+
+            t0_stamp = HAL_GetTick();
+            /* Get time for RTC*/
+            get_time_UTC(&adcs_time.utc);
+            decyear(&adcs_time);
+            julday(&adcs_time);
+
+            /* Calculate measurement vectors */
+            update_adt7420(&adcs_sensors);
+            update_sun_sensor(&adcs_sensors);
+            // Put filter here
+            update_lsm9ds0_gyro(&adcs_sensors);
+            update_rm3100(&adcs_sensors);
+            update_lsm9ds0_xm(&adcs_sensors);
+
+            /* Set actuators */
+            update_spin_torquer(&adcs_actuator);
+            update_magneto_torquer(&adcs_actuator);
+
+            /* Update position and velocity of satellite */
+            satpos_xyz(adcs_time.jd, &p_eci, &v_eci); // return sgp4 status
+
+            /* Calculate reference vectors */
+            ECI2ECEF(adcs_time.jd, p_eci, &p_ecef);
+            cart2spher(p_ecef, &p_ecef_llh);
+            igrf_vector.sdate = adcs_time.decyear;
+            igrf_vector.latitude = p_ecef_llh.lat;
+            igrf_vector.longitude = p_ecef_llh.lon;
+            igrf_vector.alt = p_ecef_llh.alt;
+            geomag(&igrf_vector); // Return igrf status, Xm,Ym,Zm in NED
+            igrf_vector.norm = norm(igrf_vector.Xm, igrf_vector.Ym,
+                    igrf_vector.Zm);
+            igrf_vector.Xm = igrf_vector.Xm / igrf_vector.norm;
+            igrf_vector.Ym = igrf_vector.Ym / igrf_vector.norm;
+            igrf_vector.Zm = igrf_vector.Zm / igrf_vector.norm;
+
+            sun_vector.JD_epoch = adcs_time.jd;
+            sun(&sun_vector); // Sun position in ECI
+            ECI2NED(sun_vector.sun_pos, &sun_ned_vector, upsat_tle.ascn,
+                    upsat_tle.eqinc, upsat_tle.argp + upsat_tle.mnan); // Convert to NED
+            sun_vector.norm = norm(sun_ned_vector.x, sun_ned_vector.y,
+                    sun_ned_vector.z);
+            sun_ned_vector.x = sun_ned_vector.x / sun_vector.norm;
+            sun_ned_vector.y = sun_ned_vector.y / sun_vector.norm;
+            sun_ned_vector.z = sun_ned_vector.z / sun_vector.norm;
+
+            /* Attitude determination */
+            // Set reference vectors
+            WahbaRot.w_m[0] = igrf_vector.Xm;
+            WahbaRot.w_m[1] = igrf_vector.Ym;
+            WahbaRot.w_m[2] = igrf_vector.Zm;
+
+            WahbaRot.w_a[0] = sun_ned_vector.x;
+            WahbaRot.w_a[1] = sun_ned_vector.y;
+            WahbaRot.w_a[2] = sun_ned_vector.z;
+
+            WahbaRotM(adcs_sensors.sun_sensor.sun_xyz,
+                    adcs_sensors.lsm9ds0_sensor.gyr,
+                    adcs_sensors.magn_sensor.rm_mag, &WahbaRot);
+
+            /* Control Law */
+            adcs_actuator.magneto_torquer.current_x = 0;
+            adcs_actuator.magneto_torquer.current_y = 0;
+            adcs_actuator.spin_torquer.RPM = 0;
+            /* Update flag */
+            ADCS_event_period_status = TIMED_EVENT_SERVICED;
+
+            t1_stamp = HAL_GetTick() - t0_stamp;
+        }
 
         /* Add software error handler */
 
         /* Refresh WDC timer */
         HAL_IWDG_Refresh(&hiwdg);
 
-        t1_stamp = HAL_GetTick() - t0_stamp; // ms
-
         /* ADCS Debug mode */
-//		dbg_msg = 7;
-//		adcs_debug();
-        LOG_UART_FILE(&huart2, "\t %d\n", t1_stamp);
+//        dbg_msg = 7;
+//        adcs_debug();
+        LOG_UART_FILE(&huart2, "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n",
+                adcs_time.utc.year, adcs_time.utc.month, adcs_time.utc.day,
+                adcs_time.utc.hour, adcs_time.utc.min, adcs_time.utc.sec);
         LOG_UART_FILE(&huart2, "%d\t %f\n",
                 adcs_sensors.temp_sensor.temp_status,
                 adcs_sensors.temp_sensor.temp_c);
@@ -677,7 +662,7 @@ static void MX_TIM7_Init(void) {
     TIM_MasterConfigTypeDef sMasterConfig;
 
     htim7.Instance = TIM7;
-    htim7.Init.Prescaler = 32;
+    htim7.Init.Prescaler = 2048;
     htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim7.Init.Period = 50000;
     if (HAL_TIM_Base_Init(&htim7) != HAL_OK) {
@@ -859,8 +844,7 @@ void adcs_debug() {
         break;
     case 7:
         get_time_UTC(&utc);
-        sprintf(test_gdb,
-                "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n",
+        sprintf(test_gdb, "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n",
                 utc.year, utc.month, utc.day, utc.hour, utc.min, utc.sec);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);

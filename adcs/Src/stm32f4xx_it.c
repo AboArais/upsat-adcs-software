@@ -37,6 +37,8 @@
 
 /* USER CODE BEGIN 0 */
 
+#include "adcs_configuration.h"
+
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -168,6 +170,7 @@ void TIM7_IRQHandler(void)
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
+  ADCS_event_period_status = TIMED_EVENT_NOT_SERVICED;
 
   /* USER CODE END TIM7_IRQn 1 */
 }
