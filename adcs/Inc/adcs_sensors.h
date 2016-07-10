@@ -14,7 +14,7 @@
 #define CTRL_REG1_G     0x20
 #define WHO_AM_I_G      0x0F
 #define GYRO_ID         0xD4
-#define GYRO_GAIN       17.5 / 1e3	// DPS
+#define GYRO_GAIN       8.75 / 1e3	// DPS
 
 #define XM_ADDR         0x1D
 #define XM_CTR_REG      0x1F
@@ -23,20 +23,20 @@
 #define XM_VAL          0x08
 #define XM_GAIN         8           // nT
 
-#define LSM9DS0_TIMEOUT 1000
+#define LSM9DS0_TIMEOUT 500
 #define LSM9DS0_MASK    0x80
 /* Gyroscope offsets */
 #define GYRO_N          100         // Calculate gyroscope offset
-#define GYRO_OFFSET_X   47
-#define GYRO_OFFSET_Y   57
-#define GYRO_OFFSET_Z   -55
+#define GYRO_OFFSET_X   -54.68
+#define GYRO_OFFSET_Y   42.2
+#define GYRO_OFFSET_Z   -120.83
 
 /* RM3100 Magnetometer, SPI1 */
 #define PNI_POLL        0x00    // Polls for a Single Measurement
 #define PNI_CMM         0x01    // Initiates Continuous Measurement Mode
 #define PNI_CCX         0x04    // Cycle Count Register – X Axis
 #define PNI_CCY         0x06    // Cycle Count Register – Y Axis
-#define PNI_CCZ         0x089   // Cycle Count Register – Z Axis
+#define PNI_CCZ         0x08   // Cycle Count Register – Z Axis
 #define PNI_TMRC        0x0B    // Sets Continuous Measurement Mode Data Rate
 #define PNI_ALLX        0x0C    // Alarm Lower Limit – X Axis
 #define PNI_AULX        0x0F    // Alarm Upper Limit – X Axis
@@ -59,7 +59,8 @@
 #define PNI_CyclesMSB   0x00
 #define PNI_CyclesLSB   0xC8
 #define PNI_GAIN        1e3/75  // Convert to nT 1e3/75
-#define PNI_TIMEOUT     1000
+#define PNI_DEFAULT_ID  0x22
+#define PNI_TIMEOUT     500
 
 /* ADT7420 temperature sensor */
 #define ADT7420_ADDRESS             0x48    // ADT7420 address, IC2

@@ -59,8 +59,12 @@ void init_lsm9ds0_gyro(_adcs_sensors *sensors) {
         return;
     }
 
-    uint8_t GyroCTRreg[5] = { 0b01111111, 0b00100101, 0b00000000, 0b10010000,
-            0b00000000 };
+    // 0x20 --> 0b01111111, 190Hz, LPF Cut off 70Hz
+    // 0x21 --> 0b00100101, HPF cut off 0.45Hz
+    // 0x22 --> 0b00000000
+    // 0x23 --> 0b10000000, 245 DPS
+    // 0x24 --> 0b00000000
+    uint8_t GyroCTRreg[5] = { 0x7F, 0x25, 0x00, 0x80, 0x00 };
     if (HAL_I2C_Mem_Write(&hi2c2, (GYRO_ADDR << 1),
     CTRL_REG1_G | LSM9DS0_MASK, 1, GyroCTRreg, 5, LSM9DS0_TIMEOUT) != HAL_OK) {
         sensors->lsm9ds0_sensor.gyr_status = DEVICE_ERROR;
@@ -89,6 +93,10 @@ void calib_lsm9ds0_gyro(_adcs_sensors *sensors) {
     for (d = 0; d < 3; d++) {
         sensors->lsm9ds0_sensor.calib_gyr[d] /= (float) cnt;
     }
+
+//    sensors->lsm9ds0_sensor.calib_gyr[0] = GYRO_OFFSET_X;
+//    sensors->lsm9ds0_sensor.calib_gyr[1] = GYRO_OFFSET_Y;
+//    sensors->lsm9ds0_sensor.calib_gyr[2] = GYRO_OFFSET_Z;
 }
 
 /* Update values for lsm9ds0 gyroscope */
@@ -104,12 +112,12 @@ void update_lsm9ds0_gyro(_adcs_sensors *sensors) {
 
     sensors->lsm9ds0_sensor.gyr_status = DEVICE_NORMAL;
 
-    sensors->lsm9ds0_sensor.gyr[0] = ((float) sensors->lsm9ds0_sensor.gyr_raw[0]
-            - sensors->lsm9ds0_sensor.calib_gyr[0]) * GYRO_GAIN;
-    sensors->lsm9ds0_sensor.gyr[1] = ((float) sensors->lsm9ds0_sensor.gyr_raw[1]
-            - sensors->lsm9ds0_sensor.calib_gyr[1]) * GYRO_GAIN;
-    sensors->lsm9ds0_sensor.gyr[2] = ((float) sensors->lsm9ds0_sensor.gyr_raw[2]
-            - sensors->lsm9ds0_sensor.calib_gyr[2]) * GYRO_GAIN;
+    sensors->lsm9ds0_sensor.gyr[0] = -((float) sensors->lsm9ds0_sensor.gyr_raw[2]
+            - sensors->lsm9ds0_sensor.calib_gyr[2]) * GYRO_GAIN; // -Zg
+    sensors->lsm9ds0_sensor.gyr[1] = -((float) sensors->lsm9ds0_sensor.gyr_raw[1]
+            - sensors->lsm9ds0_sensor.calib_gyr[1]) * GYRO_GAIN; // -Yg
+    sensors->lsm9ds0_sensor.gyr[2] = -((float) sensors->lsm9ds0_sensor.gyr_raw[0]
+            - sensors->lsm9ds0_sensor.calib_gyr[0]) * GYRO_GAIN; // -Xb
 }
 
 /* Initialize LSM9DS0 for magnetometer */
@@ -130,10 +138,16 @@ void init_lsm9ds0_xm(_adcs_sensors *sensors) {
         sensors->lsm9ds0_sensor.xm_status = DEVICE_ERROR;
         return;
     }
-    // HP filter bypassed
-    // 200Hz, 50HzBW, 4G, Magn:100Hz,2Gauss
-    uint8_t XM_CTRreg[8] = { 0b00000000, 0b01111111, 0b11001000, 0b00000000,
-            0b00000000, 0b11110100, 0b00000000, 0b00000000 };
+
+    // 0x1F --> 0b00000000
+    // 0x20 --> 0b00001000
+    // 0x21 --> 0b00000000
+    // 0x22 --> 0b00000000
+    // 0x23 --> 0b00000000
+    // 0x24 --> 0b01110100, 100Hz Data rate
+    // 0x25 --> 0b00000000, 2Gauss
+    // 0x26 --> 0b00000000
+    uint8_t XM_CTRreg[8] = { 0x00, 0x08, 0x00, 0x00, 0x0, 0x74, 0x00, 0x00 };
 
     if (HAL_I2C_Mem_Write(&hi2c2, (XM_ADDR << 1),
     XM_CTR_REG | LSM9DS0_MASK, 1, XM_CTRreg, 8, LSM9DS0_TIMEOUT) != HAL_OK) {
@@ -156,18 +170,17 @@ void update_lsm9ds0_xm(_adcs_sensors *sensors) {
 
     sensors->lsm9ds0_sensor.xm_status = DEVICE_NORMAL;
 
+    sensors->lsm9ds0_sensor.xm[0] = (float) sensors->lsm9ds0_sensor.xm_raw[2]
+            * XM_GAIN; // Zxm
+    sensors->lsm9ds0_sensor.xm[1] = -(float) sensors->lsm9ds0_sensor.xm_raw[1]
+            * XM_GAIN; // -Yxm
+    sensors->lsm9ds0_sensor.xm[2] = -(float) sensors->lsm9ds0_sensor.xm_raw[0]
+            * XM_GAIN; // -Xxm
+
     sensors->lsm9ds0_sensor.xm_norm = (float) norm(
-            sensors->lsm9ds0_sensor.xm_raw[0],
-            sensors->lsm9ds0_sensor.xm_raw[1],
-            sensors->lsm9ds0_sensor.xm_raw[2]);
-
-    sensors->lsm9ds0_sensor.xm[0] = (float) sensors->lsm9ds0_sensor.xm_raw[0]
-            * XM_GAIN;
-    sensors->lsm9ds0_sensor.xm[1] = (float) sensors->lsm9ds0_sensor.xm_raw[1]
-            * XM_GAIN;
-    sensors->lsm9ds0_sensor.xm[2] = (float) sensors->lsm9ds0_sensor.xm_raw[2]
-            * XM_GAIN;
-
+            sensors->lsm9ds0_sensor.xm[0],
+            sensors->lsm9ds0_sensor.xm[1],
+            sensors->lsm9ds0_sensor.xm[2]);
 }
 
 /* Get ID and set the Cycle Count Registers */
@@ -191,7 +204,7 @@ void init_rm3100(_adcs_sensors *sensors) {
         return;
     }
     HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
-    if (spi_out_temp[1] != 0x22) {
+    if (spi_out_temp[1] != PNI_DEFAULT_ID) {
         sensors->magn_sensor.rm_status = DEVICE_ERROR;
         return;
     }
@@ -268,15 +281,22 @@ void update_rm3100(_adcs_sensors *sensors) {
     *ptr-- = spi_out_temp[9];
     sensors->magn_sensor.rm_raw[2] = tmp >> 8;
 
-    sensors->magn_sensor.rm_norm = (float) norm(sensors->magn_sensor.rm_raw[0],
-            sensors->magn_sensor.rm_raw[1], sensors->magn_sensor.rm_raw[2]);
+    if (sensors->magn_sensor.rm_raw[0] == 0
+            && sensors->magn_sensor.rm_raw[1] == 0
+            && sensors->magn_sensor.rm_raw[1] == 0) {
+        sensors->magn_sensor.rm_status = DEVICE_ERROR;
+        return;
+    }
 
-    sensors->magn_sensor.rm_mag[0] = (float) sensors->magn_sensor.rm_raw[0]
-            * PNI_GAIN;
-    sensors->magn_sensor.rm_mag[1] = (float) sensors->magn_sensor.rm_raw[1]
-            * PNI_GAIN;
-    sensors->magn_sensor.rm_mag[2] = (float) sensors->magn_sensor.rm_raw[2]
-            * PNI_GAIN;
+    sensors->magn_sensor.rm_mag[0] = (float) sensors->magn_sensor.rm_raw[2]
+            * PNI_GAIN; // Zm
+    sensors->magn_sensor.rm_mag[1] = (float) sensors->magn_sensor.rm_raw[0]
+            * PNI_GAIN; // Xm
+    sensors->magn_sensor.rm_mag[2] = (float) sensors->magn_sensor.rm_raw[1]
+            * PNI_GAIN; // Ym
+
+    sensors->magn_sensor.rm_norm = (float) norm(sensors->magn_sensor.rm_mag[0],
+            sensors->magn_sensor.rm_mag[1], sensors->magn_sensor.rm_mag[2]);
 
 }
 
@@ -336,8 +356,7 @@ void update_adt7420(_adcs_sensors *sensors) {
     sensors->temp_sensor.temp_raw |= lsb;
 
     if ((sensors->temp_sensor.temp_raw >> 15 & 1) == 0) {
-        sensors->temp_sensor.temp_c = (float) sensors->temp_sensor.temp_raw
-                / 128;
+        sensors->temp_sensor.temp_c = (float) sensors->temp_sensor.temp_raw / 128;
     } else {
         sensors->temp_sensor.temp_c = (float) (sensors->temp_sensor.temp_raw
                 - 65536) / 128;
@@ -386,8 +405,7 @@ void init_sun_sensor(_adcs_sensors *sensors) {
         return;
     }
 
-    if ((spi_out_tmp[2] != (AD7682_CFG | AD7682_INCC | AD7682_CH1 | AD7682_BW))
-            | (spi_out_tmp[3] != (AD7682_REF | AD7682_SEQ | AD7682_RB))) {
+    if (spi_out_tmp[3] != (AD7682_REF | AD7682_SEQ | AD7682_RB)) {
         sensors->sun_sensor.sun_status = DEVICE_ERROR;
         return;
     }
@@ -451,6 +469,7 @@ void update_sun_sensor(_adcs_sensors *sensors) {
 //    sensors->sun_sensor.v_sun[2] = 1;
 //    sensors->sun_sensor.v_sun[1] = 3.3;
 //    sensors->sun_sensor.v_sun[0] = 1;
+
     /* Measure from sun sensor only if: 4*V5 − V1 − V2 − V3 − V4 ≥ 0.7
      * V5 is reference voltage */
     meas_Valid = 4 * sensors->sun_sensor.v_sun[4] - sensors->sun_sensor.v_sun[0]
@@ -518,11 +537,11 @@ void update_sun_sensor(_adcs_sensors *sensors) {
         }
 
         /* Convert to XYZ */
+        sensors->sun_sensor.sun_xyz[1] = -sinf(sensors->sun_sensor.sun_rough[1])
+                * cosf(sensors->sun_sensor.sun_rough[0]); // Yb
         sensors->sun_sensor.sun_xyz[0] = sinf(sensors->sun_sensor.sun_rough[1])
-                * cosf(sensors->sun_sensor.sun_rough[0]);
-        sensors->sun_sensor.sun_xyz[1] = sinf(sensors->sun_sensor.sun_rough[1])
-                * sinf(sensors->sun_sensor.sun_rough[0]);
-        sensors->sun_sensor.sun_xyz[2] = cosf(sensors->sun_sensor.sun_rough[1]);
+                * sinf(sensors->sun_sensor.sun_rough[0]); // -Xb
+        sensors->sun_sensor.sun_xyz[2] = -cosf(sensors->sun_sensor.sun_rough[1]); // -Zb
     } else {
         sensors->sun_sensor.sun_status = DEVICE_DISABLE;
     }
@@ -548,8 +567,7 @@ _adcs_sensor_status update_ad7682(uint8_t ch, uint16_t *v_raw) {
     AD7682_TIMEOUT) != HAL_OK) {
         return DEVICE_ERROR;
     }
-    if ((spi_out_temp[2] != (AD7682_CFG | AD7682_INCC | AD7682_CH1 | AD7682_BW))
-            | (spi_out_temp[3] != (AD7682_REF | AD7682_SEQ | AD7682_RB))) {
+    if (spi_out_temp[3] != (AD7682_REF | AD7682_SEQ | AD7682_RB)) {
         return DEVICE_ERROR;
     } else {
         *v_raw = spi_out_temp[0] << 8;
