@@ -40,6 +40,11 @@ static float SUN_SENSOR_Q[6][6] = { { -1.38461, 5.03967e-2, -1.81857e-3,
         0, 0, 0 }, { -1.49555e-9, -3.97058e-11, 0, 0, 0, 0 }, { -9.13224e-12, 0,
         0, 0, 0, 0 } };
 
+static float RM_OFFSET[] = {757.79, -43.07, 73.67 };
+static float RM_SCALE[] = {3326.96, 3235.51, 3250.45};
+static float XM_OFFSET[] = {577.79, -225.22, 813.36};
+static float XM_SCALE[] = {5126.70, 5161.29, 5272.70};
+
 /* Initialize LSM9DS0 for gyroscope */
 void init_lsm9ds0_gyro(_adcs_sensors *sensors) {
     uint8_t i2c_temp[2];
@@ -170,12 +175,9 @@ void update_lsm9ds0_xm(_adcs_sensors *sensors) {
 
     sensors->lsm9ds0_sensor.xm_status = DEVICE_NORMAL;
 
-    sensors->lsm9ds0_sensor.xm[0] = (float) sensors->lsm9ds0_sensor.xm_raw[2]
-            * XM_GAIN; // Zxm
-    sensors->lsm9ds0_sensor.xm[1] = -(float) sensors->lsm9ds0_sensor.xm_raw[1]
-            * XM_GAIN; // -Yxm
-    sensors->lsm9ds0_sensor.xm[2] = -(float) sensors->lsm9ds0_sensor.xm_raw[0]
-            * XM_GAIN; // -Xxm
+    sensors->lsm9ds0_sensor.xm[0] = ((float) sensors->lsm9ds0_sensor.xm_raw[2] - XM_OFFSET[2]) * XM_SCALE[2]; // Zxm
+    sensors->lsm9ds0_sensor.xm[1] = (-(float) sensors->lsm9ds0_sensor.xm_raw[1] - XM_OFFSET[1]) * XM_SCALE[1]; // -Yxm
+    sensors->lsm9ds0_sensor.xm[2] = (-(float) sensors->lsm9ds0_sensor.xm_raw[0] - XM_OFFSET[0]) * XM_SCALE[0]; // -Xxm
 
     sensors->lsm9ds0_sensor.xm_norm = (float) norm(
             sensors->lsm9ds0_sensor.xm[0],
@@ -190,7 +192,7 @@ void init_rm3100(_adcs_sensors *sensors) {
 
     /* Set to 0 all adcs_sensors values */
     memset(sensors->magn_sensor.rm_raw, 0, 3);
-    memset(sensors->magn_sensor.rm_mag, 0, 3);
+    memset(sensors->magn_sensor.rm, 0, 3);
     sensors->magn_sensor.rm_norm = 0;
     sensors->magn_sensor.rm_status = DEVICE_NORMAL;
 
@@ -288,15 +290,12 @@ void update_rm3100(_adcs_sensors *sensors) {
         return;
     }
 
-    sensors->magn_sensor.rm_mag[0] = (float) sensors->magn_sensor.rm_raw[2]
-            * PNI_GAIN; // Zm
-    sensors->magn_sensor.rm_mag[1] = (float) sensors->magn_sensor.rm_raw[0]
-            * PNI_GAIN; // Xm
-    sensors->magn_sensor.rm_mag[2] = (float) sensors->magn_sensor.rm_raw[1]
-            * PNI_GAIN; // Ym
+    sensors->magn_sensor.rm[0] = ((float) sensors->magn_sensor.rm_raw[2] - RM_OFFSET[2]) * RM_SCALE[2]; // Zm
+    sensors->magn_sensor.rm[1] = ((float) sensors->magn_sensor.rm_raw[0] - RM_OFFSET[0]) * RM_SCALE[0]; // Xm
+    sensors->magn_sensor.rm[2] = ((float) sensors->magn_sensor.rm_raw[1] - RM_OFFSET[1]) * RM_SCALE[1]; // Ym
 
-    sensors->magn_sensor.rm_norm = (float) norm(sensors->magn_sensor.rm_mag[0],
-            sensors->magn_sensor.rm_mag[1], sensors->magn_sensor.rm_mag[2]);
+    sensors->magn_sensor.rm_norm = (float) norm(sensors->magn_sensor.rm[0],
+            sensors->magn_sensor.rm[1], sensors->magn_sensor.rm[2]);
 
 }
 

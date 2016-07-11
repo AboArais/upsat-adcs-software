@@ -36,7 +36,7 @@
 #define PNI_CMM         0x01    // Initiates Continuous Measurement Mode
 #define PNI_CCX         0x04    // Cycle Count Register – X Axis
 #define PNI_CCY         0x06    // Cycle Count Register – Y Axis
-#define PNI_CCZ         0x08   // Cycle Count Register – Z Axis
+#define PNI_CCZ         0x08    // Cycle Count Register – Z Axis
 #define PNI_TMRC        0x0B    // Sets Continuous Measurement Mode Data Rate
 #define PNI_ALLX        0x0C    // Alarm Lower Limit – X Axis
 #define PNI_AULX        0x0F    // Alarm Upper Limit – X Axis
@@ -132,7 +132,7 @@ typedef struct {
 typedef struct {
     int32_t rm_raw[3];
     float rm_norm;
-    float rm_mag[3];
+    float rm[3];
     _adcs_sensor_status rm_status;
 } _rm3100_magn_sensor;
 
