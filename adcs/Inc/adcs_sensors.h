@@ -104,8 +104,7 @@
 #define S_SUN_SENSOR        5   // For fine measure, 5-8
 
 /* LP Filter */
-#define A_FILTER 0.9 // Coefficient
-#define N_FILTER 5 // Window
+#define A_FILTER 0.7 // Coefficient < 1.0
 
 typedef enum {
     DEVICE_ERROR = 0, DEVICE_NORMAL, DEVICE_ENABLE, DEVICE_DISABLE
@@ -120,12 +119,14 @@ typedef struct {
 typedef struct {
     int16_t gyr_raw[3];
     float gyr[3];
+    float gyr_f[3];
     float calib_gyr[3];
     _adcs_sensor_status gyr_status;
 
     int16_t xm_raw[3];
     float xm_norm;
     float xm[3];
+    float xm_f[3];
     _adcs_sensor_status xm_status;
 } _lsm9ds0_sensor;
 
@@ -133,8 +134,9 @@ typedef struct {
     int32_t rm_raw[3];
     float rm_norm;
     float rm[3];
+    float rm_f[3];
     _adcs_sensor_status rm_status;
-} _rm3100_magn_sensor;
+} _rm3100_sensor;
 
 typedef struct {
     uint16_t v_sun_raw[5];
@@ -146,10 +148,10 @@ typedef struct {
 } _ssbv_sun_sensor;
 
 typedef struct {
-    _adt7420_temp_sensor temp_sensor;
-    _lsm9ds0_sensor lsm9ds0_sensor;
-    _rm3100_magn_sensor magn_sensor;
-    _ssbv_sun_sensor sun_sensor;
+    _adt7420_temp_sensor temp;
+    _lsm9ds0_sensor imu;
+    _rm3100_sensor mgn;
+    _ssbv_sun_sensor sun;
 } _adcs_sensors;
 
 extern _adcs_sensors adcs_sensors;

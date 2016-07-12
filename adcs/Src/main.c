@@ -116,17 +116,7 @@ void adcs_debug();
 //  Read/Write TLE in external flash
 //  Time stamps for GPS or RTC alarm (on-off to update TLE-Time)
 //
-//  Add limits to measurement vectors in raw values
-//  Temperature compensate in gyroscope
-//  Temperature compensate in magnetometer
-//  Cancel soft and hard iron effects in magnetometer
-//  Comment gyroscope offset calculation and add as definitions
-//  Add second magnetometer for back-up
-//  Normalize sensor values
-//  Change magnetometers by comparing normalize values
-//  Add moving average filter in sensors
-//  Tune time-out of all devices
-//  Convert measurement vectors to body frame
+//  Temperature compensate in magnetometer and gyroscope
 //  Calculate fine sun sensor values
 //
 //  Convert WGS-84(GPS) to ECEF
@@ -137,10 +127,15 @@ void adcs_debug();
 //  Add controller
 //
 //  Software error handling
+//  Change magnetometers by comparing normalize values
+//  Tune time-out of all devices
+//
 //  Read TLE from OBC serial
 //  Get time from OBC at the start or after reset
 //  Read/Write to OBC sensors values, controller gains
-//  Send notification to OBC for critical events
+//  Send notification to OBC for errors and GPS ON
+//  Send to EPS test pkt
+
 /* USER CODE END 0 */
 
 int main(void) {
@@ -181,10 +176,7 @@ int main(void) {
     set_reset_source(rsrc);
     pkt_pool_INIT();
     uint16_t size = 0;
-    event_crt_pkt_api(uart_temp, "ADCS STARTED", 666, 666, "", &size, SATR_OK);
-    HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
-    event_dbg_api(uart_temp, "ADCS STARTED\n", &size);
-    HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
+    event_boot(rsrc, 0); // Add counter to flash
     HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
 
     /* Get time from OBC */
@@ -197,22 +189,6 @@ int main(void) {
     adcs_time.utc.min = 30;
     adcs_time.utc.sec = 0;
     set_time_UTC(adcs_time.utc);
-
-    /* Switch ON sensors-GPS */
-    adcs_pwr_switch(SWITCH_ON, SENSORS);
-    adcs_pwr_switch(SWITCH_ON, GPS);
-
-    /* Initialize sensors */
-    init_lsm9ds0_gyro(&adcs_sensors);
-    calib_lsm9ds0_gyro(&adcs_sensors);
-    init_lsm9ds0_xm(&adcs_sensors);
-    init_rm3100(&adcs_sensors);
-    init_adt7420(&adcs_sensors);
-    init_sun_sensor(&adcs_sensors);
-
-    /* Initialize GPS */
-    uint8_t *gps_buf;
-    gps_init(gps_buf);
 
     /* Initialize actuators */
     init_spin_torquer(&adcs_actuator);
@@ -243,13 +219,35 @@ int main(void) {
     xyz_t sun_ned_vector;
     sun_ned_vector.x = 0; sun_ned_vector.y = 0; sun_ned_vector.z = 0;
 
+    /* Switch ON sensors-GPS */
+    adcs_pwr_switch(SWITCH_ON, GPS);
+    HAL_Delay(100);
+    adcs_pwr_switch(SWITCH_ON, SENSORS);
+    HAL_Delay(100);
+
+    /* Initialize sensors */
+    init_lsm9ds0_gyro(&adcs_sensors);
+    calib_lsm9ds0_gyro(&adcs_sensors);
+    init_lsm9ds0_xm(&adcs_sensors);
+    init_rm3100(&adcs_sensors);
+    init_sun_sensor(&adcs_sensors);
+    init_adt7420(&adcs_sensors);
+    float xm_prev[3] = { 0 };
+    float rm_prev[3] = { 0 };
+    float gyr_prev[3] = { 0 };
+    uint8_t j = 0;
+
+    /* Initialize GPS */
+    uint8_t *gps_buf;
+    gps_init(gps_buf);
+
     /* Initialize Attitude determination */
     initWahbaStruct(&WahbaRot, LOOP_TIME);
 
     /* Refresh WDC timer */
     HAL_IWDG_Refresh(&hiwdg);
 
-    /* Kick timer interrupt for timed threads in usec */
+    /* Kick timer interrupt for timed threads */
     ADCS_event_period_status = TIMED_EVENT_SERVICED;
     kick_TIM7_timed_interrupt(LOOP_TIME_TICKS);
 
@@ -258,6 +256,8 @@ int main(void) {
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
+
+        t0_stamp = HAL_GetTick();
 
         import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
         export_pkt(OBC_APP_ID, &adcs_data.obc_uart);
@@ -273,7 +273,6 @@ int main(void) {
 
         if (ADCS_event_period_status == TIMED_EVENT_NOT_SERVICED) {
 
-            t0_stamp = HAL_GetTick();
             /* Get time for RTC*/
             get_time_UTC(&adcs_time.utc);
             decyear(&adcs_time);
@@ -282,10 +281,20 @@ int main(void) {
             /* Calculate measurement vectors */
             update_adt7420(&adcs_sensors);
             update_sun_sensor(&adcs_sensors);
-            // Put filter here
             update_lsm9ds0_gyro(&adcs_sensors);
             update_rm3100(&adcs_sensors);
             update_lsm9ds0_xm(&adcs_sensors);
+            for (j = 0; j < 3; j++) {
+                adcs_sensors.imu.xm_f[j] = A_FILTER * adcs_sensors.imu.xm[j]
+                        + (1 - A_FILTER) * xm_prev[j];
+                xm_prev[j] = adcs_sensors.imu.xm[j];
+                adcs_sensors.imu.gyr_f[j] = A_FILTER * adcs_sensors.imu.gyr[j]
+                        + (1 - A_FILTER) * gyr_prev[j];
+                gyr_prev[j] = adcs_sensors.imu.gyr[j];
+                adcs_sensors.mgn.rm_f[j] = A_FILTER * adcs_sensors.mgn.rm[j]
+                        + (1 - A_FILTER) * rm_prev[j];
+                rm_prev[j] = adcs_sensors.mgn.rm[j];
+            }
 
             /* Set actuators */
             update_spin_torquer(&adcs_actuator);
@@ -328,9 +337,8 @@ int main(void) {
             WahbaRot.w_a[1] = sun_ned_vector.y;
             WahbaRot.w_a[2] = sun_ned_vector.z;
 
-            WahbaRotM(adcs_sensors.sun_sensor.sun_xyz,
-                    adcs_sensors.lsm9ds0_sensor.gyr,
-                    adcs_sensors.magn_sensor.rm_mag, &WahbaRot);
+            WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f,
+                    adcs_sensors.mgn.rm_f, &WahbaRot);
 
             /* Control Law */
             adcs_actuator.magneto_torquer.current_x = 0;
@@ -338,46 +346,25 @@ int main(void) {
             adcs_actuator.spin_torquer.RPM = 0;
             /* Update flag */
             ADCS_event_period_status = TIMED_EVENT_SERVICED;
-
-            t1_stamp = HAL_GetTick() - t0_stamp;
         }
-
         /* Add software error handler */
 
         /* Refresh WDC timer */
         HAL_IWDG_Refresh(&hiwdg);
 
+        t1_stamp = HAL_GetTick() - t0_stamp;
+
         /* ADCS Debug mode */
 //        dbg_msg = 7;
 //        adcs_debug();
-        LOG_UART_FILE(&huart2, "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n",
-                adcs_time.utc.year, adcs_time.utc.month, adcs_time.utc.day,
-                adcs_time.utc.hour, adcs_time.utc.min, adcs_time.utc.sec);
-        LOG_UART_FILE(&huart2, "%d\t %f\n",
-                adcs_sensors.temp_sensor.temp_status,
-                adcs_sensors.temp_sensor.temp_c);
-        LOG_UART_FILE(&huart2, "%d\t %f\t %f\t %f\n",
-                adcs_sensors.magn_sensor.rm_status,
-                adcs_sensors.magn_sensor.rm_mag[0],
-                adcs_sensors.magn_sensor.rm_mag[1],
-                adcs_sensors.magn_sensor.rm_mag[2]);
-        LOG_UART_FILE(&huart2, "%d\t %f\t %f\t %f\n",
-                adcs_sensors.lsm9ds0_sensor.xm_status,
-                adcs_sensors.lsm9ds0_sensor.xm[0],
-                adcs_sensors.lsm9ds0_sensor.xm[1],
-                adcs_sensors.lsm9ds0_sensor.xm[2]);
-        LOG_UART_FILE(&huart2, "%d\t %f\t %f\t %f\n",
-                adcs_sensors.lsm9ds0_sensor.gyr_status,
-                adcs_sensors.lsm9ds0_sensor.gyr[0],
-                adcs_sensors.lsm9ds0_sensor.gyr[1],
-                adcs_sensors.lsm9ds0_sensor.gyr[2]);
-        LOG_UART_FILE(&huart2, "%d\t %f\t %f\t %f\t %f\t %f\n\n",
-                adcs_sensors.sun_sensor.sun_status,
-                adcs_sensors.sun_sensor.v_sun[0],
-                adcs_sensors.sun_sensor.v_sun[1],
-                adcs_sensors.sun_sensor.v_sun[2],
-                adcs_sensors.sun_sensor.v_sun[3],
-                adcs_sensors.sun_sensor.v_sun[4]);
+        LOG_UART_FILE(&huart2, "%.4f\t%.4f\t%.4f\n",
+                adcs_sensors.imu.xm_f[0] / adcs_sensors.imu.xm_norm,
+                adcs_sensors.imu.xm_f[1] / adcs_sensors.imu.xm_norm,
+                adcs_sensors.imu.xm_f[2] / adcs_sensors.imu.xm_norm);
+        LOG_UART_FILE(&huart2, "%.4f\t%.4f\t%.4f\n\n",
+                adcs_sensors.mgn.rm_f[0] / adcs_sensors.mgn.rm_norm,
+                adcs_sensors.mgn.rm_f[1] / adcs_sensors.mgn.rm_norm,
+                adcs_sensors.mgn.rm_f[2] / adcs_sensors.mgn.rm_norm);
 
         /* USER CODE END WHILE */
 
@@ -799,35 +786,35 @@ void adcs_debug() {
         break;
     case 1:
         snprintf(test_gdb, 100, "m %.3f %.3f %.3f\n",
-                adcs_sensors.magn_sensor.rm_mag[0],
-                adcs_sensors.magn_sensor.rm_mag[1],
-                adcs_sensors.magn_sensor.rm_mag[2]);
+                adcs_sensors.mgn.rm[0],
+                adcs_sensors.mgn.rm[1],
+                adcs_sensors.mgn.rm[2]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 2:
         snprintf(test_gdb, 100, "g %.3f %.3f %.3f\n",
-                adcs_sensors.lsm9ds0_sensor.gyr[0],
-                adcs_sensors.lsm9ds0_sensor.gyr[1],
-                adcs_sensors.lsm9ds0_sensor.gyr[2]);
+                adcs_sensors.imu.gyr[0],
+                adcs_sensors.imu.gyr[1],
+                adcs_sensors.imu.gyr[2]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 3:
         snprintf(test_gdb, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
-                adcs_sensors.sun_sensor.v_sun[0],
-                adcs_sensors.sun_sensor.v_sun[1],
-                adcs_sensors.sun_sensor.v_sun[2],
-                adcs_sensors.sun_sensor.v_sun[3],
-                adcs_sensors.sun_sensor.v_sun[4],
-                adcs_sensors.sun_sensor.v_sun[5]);
+                adcs_sensors.sun.v_sun[0],
+                adcs_sensors.sun.v_sun[1],
+                adcs_sensors.sun.v_sun[2],
+                adcs_sensors.sun.v_sun[3],
+                adcs_sensors.sun.v_sun[4],
+                adcs_sensors.sun.v_sun[5]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 4:
         snprintf(test_gdb, 100, "l %.3f %.3f\n",
-                adcs_sensors.sun_sensor.sun_rough[0],
-                adcs_sensors.sun_sensor.sun_rough[1]);
+                adcs_sensors.sun.sun_rough[0],
+                adcs_sensors.sun.sun_rough[1]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
@@ -838,7 +825,7 @@ void adcs_debug() {
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 6:
-        snprintf(test_gdb, 100, "t %.3f\n", adcs_sensors.temp_sensor.temp_c);
+        snprintf(test_gdb, 100, "t %.3f\n", adcs_sensors.temp.temp_c);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
