@@ -27,7 +27,7 @@ void init_magneto_torquer(_adcs_actuator *actuator) {
 
     /* Set up period */
     htim4.Instance = TIM4;
-    htim4.Init.Prescaler = 0;
+    htim4.Init.Prescaler = 0; // 1.282 KHz
     htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim4.Init.Period = MAGNETO_TORQUER_PERIOD;
     htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

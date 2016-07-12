@@ -31,7 +31,7 @@ typedef struct {
 } _adcs_spin;
 
 /* Set Up PWM Start up Duty-Cycle */
-#define MAGNETO_TORQUER_PERIOD      65535   // 1 kHz
+#define MAGNETO_TORQUER_PERIOD      65535   // 1.282 KHz
 #define MAGNETO_TORQUER_RESISTANCE  135     // in Ohm
 #define MAX_VOLT_MAGNETO_TORQUER    5000    // in mV
 #define MAX_CURR_MAGNETO_TORQUER    37      // in mA

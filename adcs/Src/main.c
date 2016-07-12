@@ -222,7 +222,7 @@ int main(void) {
     /* Switch ON sensors-GPS */
     adcs_pwr_switch(SWITCH_ON, GPS);
     HAL_Delay(100);
-    adcs_pwr_switch(SWITCH_ON, SENSORS);
+//    adcs_pwr_switch(SWITCH_ON, SENSORS);
     HAL_Delay(100);
 
     /* Initialize sensors */
@@ -278,28 +278,6 @@ int main(void) {
             decyear(&adcs_time);
             julday(&adcs_time);
 
-            /* Calculate measurement vectors */
-            update_adt7420(&adcs_sensors);
-            update_sun_sensor(&adcs_sensors);
-            update_lsm9ds0_gyro(&adcs_sensors);
-            update_rm3100(&adcs_sensors);
-            update_lsm9ds0_xm(&adcs_sensors);
-            for (j = 0; j < 3; j++) {
-                adcs_sensors.imu.xm_f[j] = A_FILTER * adcs_sensors.imu.xm[j]
-                        + (1 - A_FILTER) * xm_prev[j];
-                xm_prev[j] = adcs_sensors.imu.xm[j];
-                adcs_sensors.imu.gyr_f[j] = A_FILTER * adcs_sensors.imu.gyr[j]
-                        + (1 - A_FILTER) * gyr_prev[j];
-                gyr_prev[j] = adcs_sensors.imu.gyr[j];
-                adcs_sensors.mgn.rm_f[j] = A_FILTER * adcs_sensors.mgn.rm[j]
-                        + (1 - A_FILTER) * rm_prev[j];
-                rm_prev[j] = adcs_sensors.mgn.rm[j];
-            }
-
-            /* Set actuators */
-            update_spin_torquer(&adcs_actuator);
-            update_magneto_torquer(&adcs_actuator);
-
             /* Update position and velocity of satellite */
             satpos_xyz(adcs_time.jd, &p_eci, &v_eci); // return sgp4 status
 
@@ -327,6 +305,29 @@ int main(void) {
             sun_ned_vector.y = sun_ned_vector.y / sun_vector.norm;
             sun_ned_vector.z = sun_ned_vector.z / sun_vector.norm;
 
+            /* Close Magneto-torquer */
+            adcs_actuator.magneto_torquer.current_x = 0;
+            adcs_actuator.magneto_torquer.current_y = 0;
+            update_magneto_torquer(&adcs_actuator);
+
+            /* Calculate measurement vectors */
+            update_adt7420(&adcs_sensors);
+            update_sun_sensor(&adcs_sensors);
+            update_lsm9ds0_gyro(&adcs_sensors);
+            update_rm3100(&adcs_sensors);
+            update_lsm9ds0_xm(&adcs_sensors);
+            for (j = 0; j < 3; j++) {
+                adcs_sensors.imu.xm_f[j] = A_FILTER * adcs_sensors.imu.xm[j]
+                        + (1 - A_FILTER) * xm_prev[j];
+                xm_prev[j] = adcs_sensors.imu.xm[j];
+                adcs_sensors.imu.gyr_f[j] = A_FILTER * adcs_sensors.imu.gyr[j]
+                        + (1 - A_FILTER) * gyr_prev[j];
+                gyr_prev[j] = adcs_sensors.imu.gyr[j];
+                adcs_sensors.mgn.rm_f[j] = A_FILTER * adcs_sensors.mgn.rm[j]
+                        + (1 - A_FILTER) * rm_prev[j];
+                rm_prev[j] = adcs_sensors.mgn.rm[j];
+            }
+
             /* Attitude determination */
             // Set reference vectors
             WahbaRot.w_m[0] = igrf_vector.Xm;
@@ -341,9 +342,11 @@ int main(void) {
                     adcs_sensors.mgn.rm_f, &WahbaRot);
 
             /* Control Law */
-            adcs_actuator.magneto_torquer.current_x = 0;
-            adcs_actuator.magneto_torquer.current_y = 0;
+            adcs_actuator.magneto_torquer.current_x = -15;
+            adcs_actuator.magneto_torquer.current_y = 3;
             adcs_actuator.spin_torquer.RPM = 0;
+            update_magneto_torquer(&adcs_actuator);
+            update_spin_torquer(&adcs_actuator);
             /* Update flag */
             ADCS_event_period_status = TIMED_EVENT_SERVICED;
         }
@@ -357,14 +360,14 @@ int main(void) {
         /* ADCS Debug mode */
 //        dbg_msg = 7;
 //        adcs_debug();
-        LOG_UART_FILE(&huart2, "%.4f\t%.4f\t%.4f\n",
-                adcs_sensors.imu.xm_f[0] / adcs_sensors.imu.xm_norm,
-                adcs_sensors.imu.xm_f[1] / adcs_sensors.imu.xm_norm,
-                adcs_sensors.imu.xm_f[2] / adcs_sensors.imu.xm_norm);
-        LOG_UART_FILE(&huart2, "%.4f\t%.4f\t%.4f\n\n",
-                adcs_sensors.mgn.rm_f[0] / adcs_sensors.mgn.rm_norm,
-                adcs_sensors.mgn.rm_f[1] / adcs_sensors.mgn.rm_norm,
-                adcs_sensors.mgn.rm_f[2] / adcs_sensors.mgn.rm_norm);
+//        LOG_UART_FILE(&huart2, "%.4f\t%.4f\t%.4f\n",
+//                adcs_sensors.imu.xm_f[0] / adcs_sensors.imu.xm_norm,
+//                adcs_sensors.imu.xm_f[1] / adcs_sensors.imu.xm_norm,
+//                adcs_sensors.imu.xm_f[2] / adcs_sensors.imu.xm_norm);
+//        LOG_UART_FILE(&huart2, "%.4f\t%.4f\t%.4f\n\n",
+//                adcs_sensors.mgn.rm_f[0] / adcs_sensors.mgn.rm_norm,
+//                adcs_sensors.mgn.rm_f[1] / adcs_sensors.mgn.rm_norm,
+//                adcs_sensors.mgn.rm_f[2] / adcs_sensors.mgn.rm_norm);
 
         /* USER CODE END WHILE */
 
