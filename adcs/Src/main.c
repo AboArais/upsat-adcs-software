@@ -222,7 +222,7 @@ int main(void) {
     /* Switch ON sensors-GPS */
     adcs_pwr_switch(SWITCH_ON, GPS);
     HAL_Delay(100);
-//    adcs_pwr_switch(SWITCH_ON, SENSORS);
+    adcs_pwr_switch(SWITCH_ON, SENSORS);
     HAL_Delay(100);
 
     /* Initialize sensors */
@@ -271,7 +271,10 @@ int main(void) {
         // flash_write_byte(0x35, 0x0);
         // flash_read_byte(&flash_tmp, 0x0);
 
+        /* Control loop runs at 168ms, interrupt runs every 1.048s, WDG at 1.5s */
         if (ADCS_event_period_status == TIMED_EVENT_NOT_SERVICED) {
+
+            adcs_pwr_switch(SWITCH_OFF, GPS);
 
             /* Get time for RTC*/
             get_time_UTC(&adcs_time.utc);
@@ -350,6 +353,8 @@ int main(void) {
             /* Update flag */
             ADCS_event_period_status = TIMED_EVENT_SERVICED;
         }
+        adcs_pwr_switch(SWITCH_ON, GPS);
+
         /* Add software error handler */
 
         /* Refresh WDC timer */
@@ -462,7 +467,7 @@ static void MX_IWDG_Init(void) {
 
     hiwdg.Instance = IWDG;
     hiwdg.Init.Prescaler = IWDG_PRESCALER_256;
-    hiwdg.Init.Reload = 4095;
+    hiwdg.Init.Reload = 188;
     if (HAL_IWDG_Init(&hiwdg) != HAL_OK) {
         Error_Handler();
     }
@@ -474,8 +479,9 @@ static void MX_RTC_Init(void) {
 
     RTC_TimeTypeDef sTime;
     RTC_DateTypeDef sDate;
+    RTC_AlarmTypeDef sAlarm;
 
-    /**Initialize RTC and set the Time and Date
+    /**Initialize RTC and set the Time and Date 
      */
     hrtc.Instance = RTC;
     hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
@@ -506,12 +512,23 @@ static void MX_RTC_Init(void) {
         Error_Handler();
     }
 
-    /**Enable the WakeUp
+    /**Enable the Alarm A 
      */
-//	if (HAL_RTCEx_SetWakeUpTimer(&hrtc, 0, RTC_WAKEUPCLOCK_RTCCLK_DIV16)
-//			!= HAL_OK) {
-//		Error_Handler();
-//	}
+    sAlarm.AlarmTime.Hours = 0;
+    sAlarm.AlarmTime.Minutes = 0;
+    sAlarm.AlarmTime.Seconds = 0;
+    sAlarm.AlarmTime.SubSeconds = 0;
+    sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+    sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+    sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
+    sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+    sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+    sAlarm.AlarmDateWeekDay = 1;
+    sAlarm.Alarm = RTC_ALARM_A;
+    if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BIN) != HAL_OK) {
+        Error_Handler();
+    }
+
 }
 
 /* SPI1 init function */
@@ -788,35 +805,27 @@ void adcs_debug() {
     case 0:
         break;
     case 1:
-        snprintf(test_gdb, 100, "m %.3f %.3f %.3f\n",
-                adcs_sensors.mgn.rm[0],
-                adcs_sensors.mgn.rm[1],
-                adcs_sensors.mgn.rm[2]);
+        snprintf(test_gdb, 100, "m %.3f %.3f %.3f\n", adcs_sensors.mgn.rm[0],
+                adcs_sensors.mgn.rm[1], adcs_sensors.mgn.rm[2]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 2:
-        snprintf(test_gdb, 100, "g %.3f %.3f %.3f\n",
-                adcs_sensors.imu.gyr[0],
-                adcs_sensors.imu.gyr[1],
-                adcs_sensors.imu.gyr[2]);
+        snprintf(test_gdb, 100, "g %.3f %.3f %.3f\n", adcs_sensors.imu.gyr[0],
+                adcs_sensors.imu.gyr[1], adcs_sensors.imu.gyr[2]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 3:
         snprintf(test_gdb, 100, "v %.3f %.3f %.3f %.3f %.3f\n",
-                adcs_sensors.sun.v_sun[0],
-                adcs_sensors.sun.v_sun[1],
-                adcs_sensors.sun.v_sun[2],
-                adcs_sensors.sun.v_sun[3],
-                adcs_sensors.sun.v_sun[4],
-                adcs_sensors.sun.v_sun[5]);
+                adcs_sensors.sun.v_sun[0], adcs_sensors.sun.v_sun[1],
+                adcs_sensors.sun.v_sun[2], adcs_sensors.sun.v_sun[3],
+                adcs_sensors.sun.v_sun[4], adcs_sensors.sun.v_sun[5]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
         break;
     case 4:
-        snprintf(test_gdb, 100, "l %.3f %.3f\n",
-                adcs_sensors.sun.sun_rough[0],
+        snprintf(test_gdb, 100, "l %.3f %.3f\n", adcs_sensors.sun.sun_rough[0],
                 adcs_sensors.sun.sun_rough[1]);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
@@ -834,7 +843,8 @@ void adcs_debug() {
         break;
     case 7:
         get_time_UTC(&utc);
-        sprintf(test_gdb, "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n",
+        sprintf(test_gdb,
+                "\nADCS UTC TIME: Y:%d, M:%d, D:%d, h:%d, m:%d, s:%d\n",
                 utc.year, utc.month, utc.day, utc.hour, utc.min, utc.sec);
         event_dbg_api(uart_temp, test_gdb, &size);
         HAL_uart_tx(DBG_APP_ID, (uint8_t *) uart_temp, size);
