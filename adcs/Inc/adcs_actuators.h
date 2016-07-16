@@ -1,5 +1,5 @@
 /*
- * adcs_control_module.h
+ * adcs_actuators.h
  *
  *  Created on: May 21, 2016
  *      Author: azisi
@@ -37,9 +37,9 @@ typedef struct {
 #define MAX_CURR_MAGNETO_TORQUER    37      // in mA
 
 typedef struct {
-    int32_t current_x;
+    int32_t current_z;
     int32_t current_y;
-    uint32_t duty_cycle_x;
+    uint32_t duty_cycle_z;
     uint32_t duty_cycle_y;
 } _adcs_magneto;
 

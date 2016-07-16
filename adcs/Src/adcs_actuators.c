@@ -1,5 +1,5 @@
 /*
- * adcs_control_module.c
+ * adcs_actuators.c
  *
  *  Created on: May 21, 2016
  *      Author: azisi
@@ -20,9 +20,9 @@ _adcs_actuator adcs_actuator;
 void init_magneto_torquer(_adcs_actuator *actuator) {
     TIM_MasterConfigTypeDef sMasterConfig;
 
-    actuator->magneto_torquer.current_x = 0;
+    actuator->magneto_torquer.current_z = 0;
     actuator->magneto_torquer.current_y = 0;
-    actuator->magneto_torquer.duty_cycle_x = 0;
+    actuator->magneto_torquer.duty_cycle_z = 0;
     actuator->magneto_torquer.duty_cycle_y = 0;
 
     /* Set up period */
@@ -47,22 +47,22 @@ void init_magneto_torquer(_adcs_actuator *actuator) {
 
 void update_magneto_torquer(_adcs_actuator *actuator) {
 
-    if (abs(actuator->magneto_torquer.current_x) > MAX_CURR_MAGNETO_TORQUER) {
-        actuator->magneto_torquer.current_x = MAX_CURR_MAGNETO_TORQUER;
+    if (abs(actuator->magneto_torquer.current_z) > MAX_CURR_MAGNETO_TORQUER) {
+        actuator->magneto_torquer.current_z = MAX_CURR_MAGNETO_TORQUER;
     }
-    if (actuator->magneto_torquer.current_x >= 0) {
-        actuator->magneto_torquer.duty_cycle_x =
-                actuator->magneto_torquer.current_x * MAGNETO_TORQUER_RESISTANCE
+    if (actuator->magneto_torquer.current_z >= 0) {
+        actuator->magneto_torquer.duty_cycle_z =
+                actuator->magneto_torquer.current_z * MAGNETO_TORQUER_RESISTANCE
                         * MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
-        htim4.Instance->CCR1 = actuator->magneto_torquer.duty_cycle_x;
+        htim4.Instance->CCR1 = actuator->magneto_torquer.duty_cycle_z;
         htim4.Instance->CCR2 = 0;
-    } else if (actuator->magneto_torquer.current_x < 0) {
-        actuator->magneto_torquer.duty_cycle_x =
-                -actuator->magneto_torquer.current_x
+    } else if (actuator->magneto_torquer.current_z < 0) {
+        actuator->magneto_torquer.duty_cycle_z =
+                -actuator->magneto_torquer.current_z
                         * MAGNETO_TORQUER_RESISTANCE * MAGNETO_TORQUER_PERIOD
                         / MAX_VOLT_MAGNETO_TORQUER;
         htim4.Instance->CCR1 = 0;
-        htim4.Instance->CCR2 = actuator->magneto_torquer.duty_cycle_x;
+        htim4.Instance->CCR2 = actuator->magneto_torquer.duty_cycle_z;
     }
 
     if (abs(actuator->magneto_torquer.current_y) > MAX_CURR_MAGNETO_TORQUER) {

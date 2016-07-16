@@ -113,26 +113,25 @@ void adcs_debug();
 /* USER CODE BEGIN 0 */
 
 //ToDo
-//  Read/Write TLE in external flash
 //  Time stamps for GPS or RTC alarm (on-off to update TLE-Time)
 //
 //  Temperature compensate in magnetometer and gyroscope
 //  Calculate fine sun sensor values
 //
 //  Convert WGS-84(GPS) to ECEF
-//  Convert GPS time to UTC
+//  Convert GPS time to UTC date
 //
-//  Calculate rotation matrix
+//  Calculate rotation matrix and modify if one of the measure vectors is not available
 //
 //  Add controller
 //
 //  Software error handling
 //  Change magnetometers by comparing normalize values
 //  Tune time-out of all devices
-//
+//  Read/Write TLE in external flash
 //  Read TLE from OBC serial
 //  Get time from OBC at the start or after reset
-//  Read/Write to OBC sensors values, controller gains
+//  Read/Write to OBC sensors values, controller gains and boot counter
 //  Send notification to OBC for errors and GPS ON
 //  Send to EPS test pkt
 
@@ -164,19 +163,43 @@ int main(void) {
     MX_USART2_UART_Init();
     MX_TIM7_Init();
     MX_CRC_Init();
-    MX_IWDG_Init();
     MX_RTC_Init();
 
     /* USER CODE BEGIN 2 */
-    HAL_Delay(1000);
+    /* Initialize ~3.6s */
+    HAL_Delay(100);
+
+//    volatile GPIO_PinState gpio_write_value;
+//
+//    gpio_write_value = GPIO_PIN_RESET;
+//
+//    HAL_GPIO_WritePin(FM_nHLD_GPIO_Port, FM_nHLD_Pin, GPIO_PIN_SET);
+//    HAL_GPIO_WritePin(SENS_EN_GPIO_Port, SENS_EN_Pin, GPIO_PIN_RESET);
+//
+//    HAL_GPIO_WritePin(SENS_EN_GPIO_Port, SENS_EN_Pin, gpio_write_value);
+
+
+    /* Switch ON sensors-GPS */
+    adcs_pwr_switch(SWITCH_ON, SENSORS);
+    HAL_Delay(100);
 
     /* ecss */
+    uint8_t rst_counter = 0;
+    flash_init();
+    if (flash_read_byte(&rst_counter, 0x0) == FLASH_NORMAL) {
+        rst_counter++;
+        flash_erase_block4K(0x0);
+        flash_write_byte(rst_counter, 0x0);
+    } else {
+        ; // error
+    }
+
     uint8_t rsrc = 0;
     HAL_reset_source(&rsrc);
     set_reset_source(rsrc);
     pkt_pool_INIT();
     uint16_t size = 0;
-    event_boot(rsrc, 0); // Add counter to flash
+    event_boot(rsrc, rst_counter - 1); // Add counter to flash
     HAL_UART_Receive_IT(&huart2, adcs_data.obc_uart.uart_buf, UART_BUF_SIZE);
 
     /* Get time from OBC */
@@ -184,7 +207,7 @@ int main(void) {
     adcs_time.utc.year = 16;
     adcs_time.utc.month = 7;
     adcs_time.utc.day = 7;
-    adcs_time.utc.weekday = RTC_WEEKDAY_MONDAY;
+//    adcs_time.utc.weekday = RTC_WEEKDAY_MONDAY;
     adcs_time.utc.hour = 20;
     adcs_time.utc.min = 30;
     adcs_time.utc.sec = 0;
@@ -193,10 +216,6 @@ int main(void) {
     /* Initialize actuators */
     init_spin_torquer(&adcs_actuator);
     init_magneto_torquer(&adcs_actuator);
-
-    /* Time stamps */
-    uint32_t t0_stamp = 0;
-    uint32_t t1_stamp = 0;
 
     /* Initialize SGP4 and TLE read */
     orbit_t temp_tle;
@@ -219,12 +238,6 @@ int main(void) {
     xyz_t sun_ned_vector;
     sun_ned_vector.x = 0; sun_ned_vector.y = 0; sun_ned_vector.z = 0;
 
-    /* Switch ON sensors-GPS */
-    adcs_pwr_switch(SWITCH_ON, GPS);
-    HAL_Delay(100);
-    adcs_pwr_switch(SWITCH_ON, SENSORS);
-    HAL_Delay(100);
-
     /* Initialize sensors */
     init_lsm9ds0_gyro(&adcs_sensors);
     calib_lsm9ds0_gyro(&adcs_sensors);
@@ -244,12 +257,13 @@ int main(void) {
     /* Initialize Attitude determination */
     initWahbaStruct(&WahbaRot, LOOP_TIME);
 
-    /* Refresh WDC timer */
-    HAL_IWDG_Refresh(&hiwdg);
-
     /* Kick timer interrupt for timed threads */
     ADCS_event_period_status = TIMED_EVENT_SERVICED;
     kick_TIM7_timed_interrupt(LOOP_TIME_TICKS);
+
+    /* Initialize and Refresh WDG timer */
+    MX_IWDG_Init();
+    HAL_IWDG_Refresh(&hiwdg);
 
     /* USER CODE END 2 */
 
@@ -257,24 +271,24 @@ int main(void) {
     /* USER CODE BEGIN WHILE */
     while (1) {
 
-        t0_stamp = HAL_GetTick();
-
         import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
         export_pkt(OBC_APP_ID, &adcs_data.obc_uart);
 
-        /* Take GPS sentences and update TLE-Time */
-        // set adcs RTC with updated GPS time
+        /* Take GPS sentences and update TLE and Time every 288min, 5 times per day.
+         * Open GPS and set the alarm for 6min (cold start) to start the GPS.
+         * If the gps is not fixed, polling in order to get fixed. Otherwise set the
+         * alarm for 288min and store the alarm time in flash.
+         */
+        /* Set adcs RTC with updated GPS time *
         // time_management_force_time_update(OBC_APP_ID);
-        /* Test external flash */
+        /* Write to flash TLE */
         // flash_readID(&flash_tmp);
         // flash_erase_block4K(0x0);
         // flash_write_byte(0x35, 0x0);
         // flash_read_byte(&flash_tmp, 0x0);
 
-        /* Control loop runs at 168ms, interrupt runs every 1.048s, WDG at 1.5s */
+        /* Control loop runs at 168ms, interrupt runs every ~1.048s, WDG at ~1.52s */
         if (ADCS_event_period_status == TIMED_EVENT_NOT_SERVICED) {
-
-            adcs_pwr_switch(SWITCH_OFF, GPS);
 
             /* Get time for RTC*/
             get_time_UTC(&adcs_time.utc);
@@ -308,8 +322,8 @@ int main(void) {
             sun_ned_vector.y = sun_ned_vector.y / sun_vector.norm;
             sun_ned_vector.z = sun_ned_vector.z / sun_vector.norm;
 
-            /* Close Magneto-torquer */
-            adcs_actuator.magneto_torquer.current_x = 0;
+            /* Close Magneto-torquer for 56ms */
+            adcs_actuator.magneto_torquer.current_z = 0;
             adcs_actuator.magneto_torquer.current_y = 0;
             update_magneto_torquer(&adcs_actuator);
 
@@ -333,34 +347,43 @@ int main(void) {
 
             /* Attitude determination */
             // Set reference vectors
-            WahbaRot.w_m[0] = igrf_vector.Xm;
-            WahbaRot.w_m[1] = igrf_vector.Ym;
-            WahbaRot.w_m[2] = igrf_vector.Zm;
+            WahbaRot.w_m[0] = 0.60194915;
+            WahbaRot.w_m[1] = 0.11920224;
+            WahbaRot.w_m[2] = 0.78958723;
 
-            WahbaRot.w_a[0] = sun_ned_vector.x;
-            WahbaRot.w_a[1] = sun_ned_vector.y;
-            WahbaRot.w_a[2] = sun_ned_vector.z;
+            WahbaRot.w_a[0] = 0.12529282;
+            WahbaRot.w_a[1] = -0.92490180;
+            WahbaRot.w_a[2] = -0.35896846;
 
-            WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f,
-                    adcs_sensors.mgn.rm_f, &WahbaRot);
+            adcs_sensors.imu.gyr_f[0] = 0.0;
+            adcs_sensors.imu.gyr_f[1] = 0.0;
+            adcs_sensors.imu.gyr_f[2] = 0.0;
+
+            adcs_sensors.mgn.rm_f[0] = 0.60194915;
+            adcs_sensors.mgn.rm_f[1] = 0.6426;
+            adcs_sensors.mgn.rm_f[2] = 0.4740;
+
+            adcs_sensors.sun.sun_xyz[0] = 0.12529282;
+            adcs_sensors.sun.sun_xyz[1] = -0.9078;
+            adcs_sensors.sun.sun_xyz[2] = -0.4002;
+
+           WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f, adcs_sensors.mgn.rm_f, &WahbaRot);
 
             /* Control Law */
-            adcs_actuator.magneto_torquer.current_x = -15;
-            adcs_actuator.magneto_torquer.current_y = 3;
+            adcs_actuator.magneto_torquer.current_z = -15;
+            adcs_actuator.magneto_torquer.current_y = 0;
             adcs_actuator.spin_torquer.RPM = 0;
             update_magneto_torquer(&adcs_actuator);
             update_spin_torquer(&adcs_actuator);
+
             /* Update flag */
             ADCS_event_period_status = TIMED_EVENT_SERVICED;
         }
-        adcs_pwr_switch(SWITCH_ON, GPS);
 
         /* Add software error handler */
 
         /* Refresh WDC timer */
         HAL_IWDG_Refresh(&hiwdg);
-
-        t1_stamp = HAL_GetTick() - t0_stamp;
 
         /* ADCS Debug mode */
 //        dbg_msg = 7;
@@ -754,6 +777,8 @@ static void MX_GPIO_Init(void) {
     HAL_GPIO_WritePin(GPS_EN_GPIO_Port, GPS_EN_Pin, GPIO_PIN_SET);
 
     /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(SENS_EN_GPIO_Port, SENS_EN_Pin, GPIO_PIN_RESET);
+
     HAL_GPIO_WritePin(SENS_EN_GPIO_Port, SENS_EN_Pin, GPIO_PIN_SET);
 
     /*Configure GPIO pin Output Level */

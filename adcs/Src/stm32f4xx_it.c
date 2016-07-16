@@ -181,11 +181,10 @@ void UART4_IRQHandler(void)
 void TIM7_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM7_IRQn 0 */
-
+  ADCS_event_period_status = TIMED_EVENT_NOT_SERVICED;
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
-  ADCS_event_period_status = TIMED_EVENT_NOT_SERVICED;
 
   /* USER CODE END TIM7_IRQn 1 */
 }

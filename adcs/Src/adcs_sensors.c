@@ -40,10 +40,10 @@ static float SUN_SENSOR_Q[6][6] = { { -1.38461, 5.03967e-2, -1.81857e-3,
         0, 0, 0 }, { -1.49555e-9, -3.97058e-11, 0, 0, 0, 0 }, { -9.13224e-12, 0,
         0, 0, 0, 0 } };
 
-static float RM_OFFSET[] = { 757.79, -43.07, 73.67 };
-static float RM_SCALE[] = { 3326.96, 0, 0, 0, 3235.51, 0, 0, 0, 3250.45 };
-static float XM_OFFSET[] = { 577.79, -225.22, 813.36 };
-static float XM_SCALE[] = { 5126.70, 0, 0, 0, 5161.29, 0, 0, 0, 5272.70 };
+static float RM_OFFSET[] = { 727.5142, -76.0090, 75.7189 };
+static float RM_SCALE[] = { 0.2991e-3, 0.0139e-3, -0.0008e-3, 0, 0.3142e-3, -0.0026e-3, 0, 0, 0.3081e-3 };
+static float XM_OFFSET[] = { 610.3734, -192.9480, 831.2022 };
+static float XM_SCALE[] = { 0.1943e-3, -0.0059e-3, -0.0008e-3, 0, 0.1930e-3, -0.0052e-3, 0, 0, 0.1901e-3 };
 
 /* Initialize LSM9DS0 for gyroscope */
 void init_lsm9ds0_gyro(_adcs_sensors *sensors) {
