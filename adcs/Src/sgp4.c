@@ -469,41 +469,41 @@ static double d_read(uint8_t *str, uint8_t start, uint8_t stop) {
 }
 
 tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
-    int8_t imode;
-    tle_status status;
+    int8_t imode = -1;
+    tle_status tle_status_value = TLE_ERROR;
 
     imode = init_sgp4(&new_tle); // Check-Update TLE
     switch (imode) {
     case SGP4_ERROR:
-        status = TLE_ERROR; // SGDP error
+        tle_status_value = TLE_ERROR; // SGDP error
         break;
     case SGP4_NOT_INIT:
-        status = TLE_ERROR; // SGDP not init
+        tle_status_value = TLE_ERROR; // SGDP not init
         break;
     case SGP4_ZERO_ECC:
-        status = TLE_NORMAL; // SGDP zero ecc
+        tle_status_value = TLE_NORMAL; // SGDP zero ecc
         break;
     case SGP4_NEAR_SIMP:
-        status = TLE_NORMAL; // SGP4 simple
+        tle_status_value = TLE_NORMAL; // SGP4 simple
         break;
     case SGP4_NEAR_NORM:
-        status = TLE_NORMAL; // SGP4 normal
+        tle_status_value = TLE_NORMAL; // SGP4 normal
         break;
     case SGP4_DEEP_NORM:
-        status = TLE_ERROR; // SDP4 normal
+        tle_status_value = TLE_ERROR; // SDP4 normal
         break;
     case SGP4_DEEP_RESN:
-        status = TLE_ERROR; // SDP4 resonant
+        tle_status_value = TLE_ERROR; // SDP4 resonant
         break;
     case SGP4_DEEP_SYNC:
-        status = TLE_ERROR; // SDP4 synchronous
+        tle_status_value = TLE_ERROR; // SDP4 synchronous
         break;
     default:
-        status = TLE_ERROR; // SGDP mode not recognised!
+        tle_status_value = TLE_ERROR; // SGDP mode not recognised!
         break;
     }
 
-    switch (status) {
+    switch (tle_status_value) {
     case TLE_ERROR:
         // Not update the TLE and init again sgp4 with old TLE
         init_sgp4(tle);
@@ -518,13 +518,135 @@ tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
         tle->mnan = new_tle.mnan;
         tle->argp = new_tle.argp;
         tle->ascn = new_tle.ascn;
-        tle->smjaxs = new_tle.smjaxs;
         tle->norb = new_tle.norb;
         tle->satno = new_tle.satno;
+        flash_write_tle(tle);
         break;
     }
 
-    return status;
+    return tle_status_value;
+}
+
+flash_status flash_write_tle(orbit_t *flash_tle) {
+
+    uint8_t tle_data[73] = { 0 };
+    uint8_t tle_cnt = 0;
+
+    cnvD_8(flash_tle->argp, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->ascn, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->bstar, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->ecc, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->ep_day, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->eqinc, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->mnan, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnvD_8(flash_tle->rev, &tle_data[tle_cnt]);
+    tle_cnt += 8;
+    cnv16_8((uint16_t)flash_tle->satno, &tle_data[tle_cnt]);
+    tle_cnt += 2;
+    cnv16_8((uint16_t)flash_tle->ep_year, &tle_data[tle_cnt]);
+    tle_cnt += 2;
+    cnv32_8((uint32_t)flash_tle->norb, &tle_data[tle_cnt]);
+    tle_cnt += 4;
+
+    if (flash_erase_block4K(TLE_BASE_ADDRESS) == FLASH_NORMAL) {
+        flash_write_page(tle_data, TLE_BASE_ADDRESS);
+    } else { return FLASH_ERROR; }
+
+    return FLASH_NORMAL;
+
+}
+
+flash_status flash_read_tle(orbit_t *flash_tle) {
+
+    uint8_t tle_data[8] = { 0 };
+    uint8_t i = 0;
+    uint32_t flash_read_address = TLE_BASE_ADDRESS;
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->argp);
+
+    for (i = 0; i < 8; i++) {
+        if (flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->ascn);
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->bstar);
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->ecc);
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->ep_day);
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->eqinc);
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->mnan);
+
+    for (i = 0; i < 8; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_D(tle_data, &flash_tle->rev);
+
+    for (i = 0; i < 2; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_16(tle_data, (uint16_t)&flash_tle->satno);
+
+    for (i = 0; i < 2; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_16(tle_data, (uint16_t)&flash_tle->ep_year);
+
+    for (i = 0; i < 4; i++) {
+        if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
+            flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
+        } else { return FLASH_ERROR; }
+    }
+    cnv8_32(tle_data, (uint32_t)&flash_tle->norb);
+
+    return FLASH_NORMAL;
 }
 
 /* ======================================================================

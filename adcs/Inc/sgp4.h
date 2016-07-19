@@ -24,9 +24,12 @@
 
 #include "adcs_frame.h"
 #include "adcs_time.h"
+#include "adcs_flash.h"
 
 #define TLE_SIZE 145
 #define TLE_LINE2_OFFSET 69+1
+#define TLE_BASE_ADDRESS 0x00F000
+#define TLE_ADDRESS_OFFSET 1
 
 typedef struct orbit_s {
     /* Add the epoch time if required. */
@@ -57,5 +60,7 @@ int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel);
 orbit_t read_tle(uint8_t *tle);
 orbit_t calculate_tle(xyz_t position, xyz_t velocity, _tle_epoch updt_tle_epoch);
 tle_status update_tle(orbit_t *tle, orbit_t new_tle);
+flash_status flash_write_tle(orbit_t *flash_tle);
+flash_status flash_read_tle(orbit_t *flash_tle);
 
 #endif
