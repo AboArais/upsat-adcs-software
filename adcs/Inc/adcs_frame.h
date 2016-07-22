@@ -20,7 +20,7 @@ typedef struct {
     double alt;
 } llh_t;
 
-void WGS842ECEF();
+void ECEF2ECI(double jd, xyz_t from, xyz_t *to);
 void ECI2ECEF(double jd, xyz_t from, xyz_t *to);
 void ECI2NED(xyz_t from, xyz_t *to, double w, double i, double u);
 void cart2spher(xyz_t from, llh_t *to);

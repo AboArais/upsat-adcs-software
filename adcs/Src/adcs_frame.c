@@ -29,6 +29,18 @@ void ECI2ECEF(double jd, xyz_t from, xyz_t *to) {
 
 }
 
+void ECEF2ECI(double jd, xyz_t from, xyz_t *to) {
+
+    double Cgst, Sgst = 0;
+    double gst = - gha_aries(jd); // R^-1(a) = R(a) (z-axis)
+    Cgst = cos(gst);
+    Sgst = sin(gst);
+    to->x = from.x * Cgst + from.y * Sgst;
+    to->y = -from.x * Sgst + from.y * Cgst;
+    to->z = from.z;
+
+}
+
 void ECI2NED(xyz_t from, xyz_t *to, double w, double i, double u) {
 
     double R[3][3] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
