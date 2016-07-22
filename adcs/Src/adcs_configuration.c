@@ -9,7 +9,10 @@
 
 ADCS_timed_event_status ADCS_event_period_status;
 
-/* TIM7 init function */
+/**
+ * Setup Timer 7 to run control loop every 1sec
+ * @param control_loop
+ */
 void kick_TIM7_timed_interrupt(uint32_t control_loop) {
 
     TIM_MasterConfigTypeDef sMasterConfig;
@@ -29,4 +32,19 @@ void kick_TIM7_timed_interrupt(uint32_t control_loop) {
     }
     /* Kick timer interrupt for timed threads */
     HAL_TIM_Base_Start_IT(&htim7);
+}
+
+/**
+ * Update eps counter to send a packet every ~2min to show if ADCS is alive
+ */
+uint8_t eps_cnt = 0;
+
+void update_eps_pkt() {
+    /* Send to EPS test packet every 2min */
+    if (eps_cnt > TEST_EPS_PKT_TIME) {
+        eps_cnt = 0;
+        sys_refresh();
+    } else {
+        eps_cnt++;
+    }
 }
