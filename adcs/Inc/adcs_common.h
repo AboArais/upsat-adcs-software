@@ -20,6 +20,9 @@
 #define SIDERIAL_DAY    (23.0*60.0 + 56.0 + 4.09054/60.0)   // Against stars
 #define SOLAR_DAY_SEC   86400.0                             // Seconds per 24 hours
 #define SOLAR_DAY_HOURS 24                                  // Hours for one day
+#define JULIAN_GPS_TIME 2444244.5                           // Julian Date of GPS starting date
+#define LEAP_SECOND     17                                  // Leap seconds of 2016
+#define JD1900          2415020.5                           // Julian day number for Jan 1st, 00:00 hours 1900
 
 #define EQRAD   6378.137)                   // Earth radius at equator, km
 #define LATCON  (1.0/298.257)               // Latitude radius constant
@@ -28,7 +31,6 @@
 #define MU          398600.5    // Earth gravitational constant for wgs-84 in km3 / s2
 #define EARTH_RADII 6378E3      // Unit earth radii
 
-#define JD1900  2415020.5   // Julian day number for Jan 1st, 00:00 hours 1900
 
 /* Coordinate conversion macros */
 #define DEG(x) ((x)/DEG2RAD)
