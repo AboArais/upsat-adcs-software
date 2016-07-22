@@ -19,6 +19,10 @@ flash_status flash_readID(uint8_t *id);
 flash_status flash_chip_erase();
 flash_status flash_erase_block4K(uint32_t address);
 flash_status flash_write_byte(uint8_t data, uint32_t address);
+flash_status flash_write_page(uint8_t *data, uint32_t address);
 flash_status flash_read_byte(uint8_t *data, uint32_t address);
+
+extern uint32_t adcs_boot_cnt;
+flash_status flash_increment_boot_counter();
 
 #endif /* ADCS_FLASH_H_ */
