@@ -69,6 +69,13 @@
 
 #include "sgp4.h"
 #include "adcs_common.h"
+#include "service_utilities.h"
+
+/* Global Variables */
+orbit_t upsat_tle;
+uint8_t tle_string[TLE_SIZE];
+xyz_t p_eci, v_eci;
+/********************/
 
 typedef struct kep_s {
     double theta; /* Angle "theta" from equatorial plane (rad) = U. */
@@ -86,19 +93,13 @@ typedef struct kep_s {
     double ecc; /* Eccentricity at 'tsince'. */
 } kep_t;
 
-/* Global Variables */
-double SGP4_jd0; /* Julian Day for epoch (available to outside functions). */
-orbit_t upsat_tle;
-uint8_t tle_string[TLE_SIZE];
-xyz_t p_eci, v_eci;
-
-static uint32_t i_read(uint8_t *str, uint8_t start, uint8_t stop);
-static double d_read(uint8_t *str, uint8_t start, uint8_t stop);
-
-static int init_sgp4(orbit_t *orb);
-static int sgp4(double tsince, int withvel, kep_t *kep);
+static sgp4_status init_sgp4(orbit_t *orb);
+static sgp4_status sgp4(double tsince, uint8_t withvel, kep_t *kep);
 static void kep2xyz(kep_t *K, xyz_t *pos, xyz_t *vel);
 
+/* Functions for TLE calculation */
+static uint32_t i_read(uint8_t *str, uint8_t start, uint8_t stop);
+static double d_read(uint8_t *str, uint8_t start, uint8_t stop);
 static void rv2coe(double r[3], double v[3], double mu, double *p, double *a,
         double *ecc, double *incl, double *omega, double *argp, double *nu,
         double *m, double *arglat, double *truelon, double *lonper);
@@ -164,18 +165,11 @@ static INLINE double DCUBE(double a) {
 static INLINE float FCUBE(float a) {
     return (a * a * a);
 }
-static INLINE int ICUBE(int a) {
-    return (a * a * a);
-}
 static INLINE double DPOW4(double a) {
     a *= a;
     return (a * a);
 }
 static INLINE float FPOW4(float a) {
-    a *= a;
-    return (a * a);
-}
-static INLINE int IPOW4(int a) {
     a *= a;
     return (a * a);
 }
@@ -236,17 +230,6 @@ void sincos(double, double *, double *);
 #define POW4 DPOW4
 #endif
 
-/* SGP4 function return values. */
-
-#define SGP4_ERROR     (-1)
-#define SGP4_NOT_INIT  0
-#define SGP4_ZERO_ECC  1
-#define SGP4_NEAR_SIMP 2
-#define SGP4_NEAR_NORM 3
-#define SGP4_DEEP_NORM 4
-#define SGP4_DEEP_RESN 5
-#define SGP4_DEEP_SYNC 6
-
 /* ================ single / double precision fix-ups =============== */
 
 #define ECC_ZERO        ((real)0.0)             /* Zero eccentricity case ? */
@@ -303,7 +286,8 @@ static real bstar; /* Drag term. */
 
 /* ================== Local "global" variables for SGP4 ================= */
 
-static int imode = SGP4_NOT_INIT;
+static double SGP4_jd0; /* Julian Day for epoch (available to outside functions). */
+static sgp4_status imode = SGP4_NOT_INIT;
 static real sinIO, cosIO, sinXMO, cosXMO;
 static real c1, c2, c3, c4, c5, d2, d3, d4;
 static real omgcof, xmcof, xlcof, aycof;
@@ -312,15 +296,22 @@ static real xnodcf, delmo, x7thm1, x3thm1, x1mth2;
 static real aodp, eta, omgdot, xnodot;
 static double xnodp, xmdot;
 
-static long Isat = 0; /* 16-bit compilers need 'long' integer for higher space catalogue numbers. */
+static uint32_t Isat = 0; /* 16-bit compilers need 'long' integer for higher space catalogue numbers. */
 double perigee, period, apogee;
 
-long Icount = 0;
-int MaxNR = 0;
-int Set_LS_zero = 0; /* Set to 1 to zero Lunar-Solar terms at epoch. */
+uint32_t Icount = 0;
+uint8_t MaxNR = 0;
+uint8_t Set_LS_zero = 0; /* Set to 1 to zero Lunar-Solar terms at epoch. */
 
 /* ==================================================================== */
 
+/**
+ * Calculate TLE, with given position, velocity and TLE epoch
+ * @param position in km
+ * @param velocity in km/s
+ * @param updt_tle_epoch
+ * @return new TLE
+ */
 orbit_t calculate_tle(xyz_t position, xyz_t velocity, _tle_epoch updt_tle_epoch) {
 
     double p[3], v[3];
@@ -426,7 +417,6 @@ orbit_t read_tle(uint8_t *tle) {
  Mimick the FORTRAN formatted read (assumes array starts at 1), copy
  characters to buffer then convert.
  ================================================================== */
-
 static uint32_t i_read(uint8_t *str, uint8_t start, uint8_t stop) {
     uint32_t itmp = 0;
     uint8_t ii = 0;
@@ -469,7 +459,7 @@ static double d_read(uint8_t *str, uint8_t start, uint8_t stop) {
 }
 
 tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
-    int8_t imode = -1;
+    sgp4_status imode = SGP4_ERROR;
     tle_status tle_status_value = TLE_ERROR;
 
     imode = init_sgp4(&new_tle); // Check-Update TLE
@@ -552,7 +542,7 @@ flash_status flash_write_tle(orbit_t *flash_tle) {
     tle_cnt += 2;
     cnv16_8((uint16_t)flash_tle->ep_year, &tle_data[tle_cnt]);
     tle_cnt += 2;
-    cnv32_8((uint32_t)flash_tle->norb, &tle_data[tle_cnt]);
+    cnv32_8(flash_tle->norb, &tle_data[tle_cnt]);
     tle_cnt += 4;
 
     if (flash_erase_block4K(TLE_BASE_ADDRESS) == FLASH_NORMAL) {
@@ -644,9 +634,30 @@ flash_status flash_read_tle(orbit_t *flash_tle) {
             flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
         } else { return FLASH_ERROR; }
     }
-    cnv8_32(tle_data, (uint32_t)&flash_tle->norb);
+    cnv8_32(tle_data, &flash_tle->norb);
 
     return FLASH_NORMAL;
+}
+
+void init_satpos_xyz() {
+
+    upsat_tle.argp = 0;
+    upsat_tle.ascn = 0;
+    upsat_tle.bstar = 0;
+    upsat_tle.ecc = 0;
+    upsat_tle.ep_day = 0;
+    upsat_tle.ep_year = 0;
+    upsat_tle.eqinc = 0;
+    upsat_tle.mnan = 0;
+    upsat_tle.norb =0;
+    upsat_tle.rev = 0;
+    upsat_tle.satno = 0;
+    upsat_tle.smjaxs = 0;
+    memset(tle_string, 0, TLE_SIZE);
+
+    p_eci.x = 0; p_eci.y = 0; p_eci.z = 0;
+    v_eci.x = 0; v_eci.y = 0; v_eci.y = 0;
+
 }
 
 /* ======================================================================
@@ -662,9 +673,10 @@ flash_status flash_read_tle(orbit_t *flash_tle) {
 
  ====================================================================== */
 
-int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel) {
+sgp4_status satpos_xyz(double jd, xyz_t *pos, xyz_t *vel) {
     kep_t K;
-    int withvel, rv;
+    uint8_t withvel;
+    sgp4_status rv;
     double tsince;
 
     tsince = (jd - SGP4_jd0) * XMNPDA;
@@ -700,7 +712,7 @@ int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel) {
  The return value indicates the orbital model used.
  ======================================================================= */
 
-static int init_sgp4(orbit_t *orb) {
+static sgp4_status init_sgp4(orbit_t *orb) {
     LOCAL_REAL theta2, theta4, xhdot1, x1m5th;
     LOCAL_REAL s4, del1, del0;
     LOCAL_REAL betao, betao2, coef, coef1;
@@ -708,7 +720,7 @@ static int init_sgp4(orbit_t *orb) {
     LOCAL_REAL pinvsq, tsi, psisq, c1sq;
     LOCAL_DOUBLE a0, a1, epoch;
     real temp0, temp1, temp2, temp3;
-    long iday, iyear;
+    uint32_t iday, iyear;
 
     /* Copy over elements. */
     /* Convert year to Gregorian with century as 1994 or 94 type ? */
@@ -978,7 +990,7 @@ static int init_sgp4(orbit_t *orb) {
 
  ======================================================================= */
 
-static int sgp4(double tsince, int withvel, kep_t *kep) {
+static sgp4_status sgp4(double tsince, uint8_t withvel, kep_t *kep) {
     LOCAL_REAL rk, uk, xnodek, xinck, em, xinc;
     LOCAL_REAL xnode, delm, axn, ayn, omega;
     LOCAL_REAL capu, epw, elsq, invR, beta2, betal;
@@ -986,12 +998,12 @@ static int sgp4(double tsince, int withvel, kep_t *kep) {
     LOCAL_REAL a, e, r, u, pl;
     LOCAL_REAL sinEPW, cosEPW, sinOMG, cosOMG;
     LOCAL_DOUBLE xmp, xl, xlt;
-    const int MAXI = 10;
+    const uint8_t MAXI = 10;
 
     real esinE, ecosE, maxnr;
     real temp0, temp1, temp2, temp3;
     real tempa, tempe, templ;
-    int ii;
+    uint8_t ii;
 
 #ifdef SGP4_SNGL
     real ts = (real) tsince;
@@ -1558,10 +1570,11 @@ static void newtonnu(double ecc, double nu, double *e0, double *m) {
 static void rv2coe(double r[3], double v[3], double mu, double *p, double *a,
         double *ecc, double *incl, double *omega, double *argp, double *nu,
         double *m, double *arglat, double *truelon, double *lonper) {
+
     double undefined, small, hbar[3], nbar[3], magr, magv, magn, ebar[3], sme,
             rdotv, infinite, temp, c1, hk, magh, e;
 
-    int i;
+    uint8_t i;
     char typeorbit[3];
 
     small = 0.00000001;

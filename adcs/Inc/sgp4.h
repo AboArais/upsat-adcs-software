@@ -33,7 +33,7 @@
 
 typedef struct orbit_s {
     /* Add the epoch time if required. */
-    int ep_year; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
+    uint16_t ep_year; /* Year of epoch, e.g. 94 for 1994, 100 for 2000AD */
     double ep_day; /* Day of epoch from 00:00 Jan 1st ( = 1.0 ) */
     double rev; /* Mean motion, revolutions per day */
     double bstar; /* Drag term .*/
@@ -43,9 +43,21 @@ typedef struct orbit_s {
     double argp; /* Argument of perigee, radians */
     double ascn; /* Right ascension (ascending node), radians */
     double smjaxs; /* Semi-major axis, km */
-    long norb; /* Orbit number, for elements */
-    int satno; /* Satellite number. */
+    uint32_t norb; /* Orbit number, for elements */
+    uint16_t satno; /* Satellite number. */
 } orbit_t;
+
+/* SGP4 function return values. */
+typedef enum {
+    SGP4_ERROR = -1,
+    SGP4_NOT_INIT,
+    SGP4_ZERO_ECC,
+    SGP4_NEAR_SIMP,
+    SGP4_NEAR_NORM,
+    SGP4_DEEP_NORM,
+    SGP4_DEEP_RESN,
+    SGP4_DEEP_SYNC,
+} sgp4_status;
 
 typedef enum {
     TLE_NORMAL = 0, TLE_ERROR
@@ -55,7 +67,8 @@ extern orbit_t upsat_tle;
 extern uint8_t tle_string[TLE_SIZE];
 extern xyz_t p_eci, v_eci;
 
-int satpos_xyz(double jd, xyz_t *pos, xyz_t *vel);
+void init_satpos_xyz();
+sgp4_status satpos_xyz(double jd, xyz_t *pos, xyz_t *vel);
 
 orbit_t read_tle(uint8_t *tle);
 orbit_t calculate_tle(xyz_t position, xyz_t velocity, _tle_epoch updt_tle_epoch);
