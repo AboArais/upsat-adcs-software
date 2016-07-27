@@ -38,6 +38,7 @@
 /* USER CODE BEGIN 0 */
 
 #include "adcs_configuration.h"
+#include "adcs_gps.h"
 
 /* USER CODE END 0 */
 
@@ -153,7 +154,7 @@ void USART2_IRQHandler(void)
 void RTC_Alarm_IRQHandler(void)
 {
   /* USER CODE BEGIN RTC_Alarm_IRQn 0 */
-
+  HAL_GPS_Alarm_Handler(gps_state.status);
   /* USER CODE END RTC_Alarm_IRQn 0 */
   HAL_RTC_AlarmIRQHandler(&hrtc);
   /* USER CODE BEGIN RTC_Alarm_IRQn 1 */
