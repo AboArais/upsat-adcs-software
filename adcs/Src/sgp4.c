@@ -306,7 +306,7 @@ uint8_t Set_LS_zero = 0; /* Set to 1 to zero Lunar-Solar terms at epoch. */
 /* ==================================================================== */
 
 /**
- * Calculate TLE, with given position, velocity and TLE epoch
+ * @brief Calculate TLE, with given position, velocity and TLE epoch
  * @param position in km
  * @param velocity in km/s
  * @param updt_tle_epoch
@@ -510,7 +510,6 @@ tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
         tle->ascn = new_tle.ascn;
         tle->norb = new_tle.norb;
         tle->satno = new_tle.satno;
-        flash_write_tle(tle);
         break;
     }
 
@@ -538,9 +537,9 @@ flash_status flash_write_tle(orbit_t *flash_tle) {
     tle_cnt += 8;
     cnvD_8(flash_tle->rev, &tle_data[tle_cnt]);
     tle_cnt += 8;
-    cnv16_8((uint16_t)flash_tle->satno, &tle_data[tle_cnt]);
+    cnv16_8(flash_tle->satno, &tle_data[tle_cnt]);
     tle_cnt += 2;
-    cnv16_8((uint16_t)flash_tle->ep_year, &tle_data[tle_cnt]);
+    cnv16_8(flash_tle->ep_year, &tle_data[tle_cnt]);
     tle_cnt += 2;
     cnv32_8(flash_tle->norb, &tle_data[tle_cnt]);
     tle_cnt += 4;
@@ -620,14 +619,14 @@ flash_status flash_read_tle(orbit_t *flash_tle) {
             flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
         } else { return FLASH_ERROR; }
     }
-    cnv8_16(tle_data, (uint16_t)&flash_tle->satno);
+    cnv8_16LE(tle_data, &flash_tle->satno);
 
     for (i = 0; i < 2; i++) {
         if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
             flash_read_address = flash_read_address + TLE_ADDRESS_OFFSET;
         } else { return FLASH_ERROR; }
     }
-    cnv8_16(tle_data, (uint16_t)&flash_tle->ep_year);
+    cnv8_16LE(tle_data, &flash_tle->ep_year);
 
     for (i = 0; i < 4; i++) {
         if(flash_read_byte(&tle_data[i], flash_read_address) == FLASH_NORMAL) {
@@ -725,7 +724,7 @@ static sgp4_status init_sgp4(orbit_t *orb) {
     /* Copy over elements. */
     /* Convert year to Gregorian with century as 1994 or 94 type ? */
 
-    iyear = (long) orb->ep_year;
+    iyear = (uint32_t) orb->ep_year;
 
     if (iyear < 1960) {
         /* Assume 0 and 100 both refer to 2000AD */

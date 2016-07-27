@@ -13,7 +13,7 @@ ADCS_timed_event_status ADCS_event_period_status;
  * Setup Timer 7 to run control loop every 1sec
  * @param control_loop
  */
-void kick_TIM7_timed_interrupt(uint32_t control_loop) {
+HAL_StatusTypeDef kick_TIM7_timed_interrupt(uint32_t control_loop) {
 
     TIM_MasterConfigTypeDef sMasterConfig;
 
@@ -22,16 +22,18 @@ void kick_TIM7_timed_interrupt(uint32_t control_loop) {
     htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
     htim7.Init.Period = control_loop;
     if (HAL_TIM_Base_Init(&htim7) != HAL_OK) {
-        // return error
+        return HAL_ERROR;
     }
 
     sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
     sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK) {
-        // return error
+        return HAL_ERROR;
     }
     /* Kick timer interrupt for timed threads */
     HAL_TIM_Base_Start_IT(&htim7);
+
+    return HAL_OK;
 }
 
 /**

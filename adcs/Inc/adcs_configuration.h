@@ -14,13 +14,13 @@
 #define ADCS_UART_DBG_EN    1
 #define UART_DBG_TIMEOUT    1000
 
-#define TEST_EPS_PKT_TIME       120                     // in sec
-#define GPS_START_TIME          288*60                  // in sec
-#define GPS_COLD_START_TIME     GPS_START_TIME + 6*60              // in sec
-#define GPS_PROBLEM_TIME        GPS_START_TIME + 20*60    // in sec
+#define NUM_REQUEST_TIME_OBC    10  //Request time from OBC
+
+#define TEST_EPS_PKT_TIME       120 // in sec
 
 #define LOOP_TIME           1       // in sec
 #define LOOP_TIME_TICKS     50000   // in ticks
+
 typedef enum {
     TIMED_EVENT_SERVICED = 0,
     TIMED_EVENT_NOT_SERVICED,
@@ -31,7 +31,7 @@ extern TIM_HandleTypeDef htim7;
 extern ADCS_timed_event_status ADCS_event_period_status;
 
 /* Configure control loop timer */
-void kick_TIM7_timed_interrupt(uint32_t control_loop); // in ticks
+HAL_StatusTypeDef kick_TIM7_timed_interrupt(uint32_t control_loop); // in ticks
 
 extern uint8_t eps_cnt;
 void update_eps_pkt();

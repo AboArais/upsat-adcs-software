@@ -86,6 +86,10 @@ flash_status flash_readID(uint8_t *id) {
 
     *id = spi_out_temp[0];
 
+    if(*id != FLASH_ID) {
+        return FLASH_ERROR;
+    }
+
     return FLASH_NORMAL;
 }
 
@@ -252,10 +256,10 @@ flash_status flash_increment_boot_counter() {
         }
     }
     cnv8_32(adcs_boot_cnt_8, &adcs_boot_cnt);
-    adcs_boot_cnt++;
+    adcs_boot_cnt ++;
     if (flash_erase_block4K(BOOT_CNT_BASE_ADDRESS) == FLASH_ERROR) {
         return FLASH_ERROR;
-    };
+    }
     cnv32_8(adcs_boot_cnt, &adcs_boot_cnt_8);
     if (flash_write_page(adcs_boot_cnt_8, BOOT_CNT_BASE_ADDRESS) == FLASH_ERROR) {
         return FLASH_ERROR;

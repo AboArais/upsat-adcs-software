@@ -107,6 +107,7 @@ void gps2utc(time_keeping_adcs *t) {
     t->utc.year = (uint8_t) (tmp_year - 2000);
     t->utc.month = (uint8_t) tmp_month;
     t->utc.day = (uint8_t) tmp_day;
+    t->utc.weekday = adcs_time.utc.weekday;
 
     UT = (t->jd - iJD + 0.5) * 24;
     tmp_hour = UT;
