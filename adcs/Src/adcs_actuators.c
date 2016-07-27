@@ -84,7 +84,7 @@ void update_magneto_torquer(_adcs_actuator *actuator) {
     }
 }
 
-void init_spin_torquer(_adcs_actuator *actuator) {
+_adcs_spin_status init_spin_torquer(_adcs_actuator *actuator) {
 
     actuator->spin_torquer.RPM = 10;
     actuator->spin_torquer.rampTime = 0;
@@ -92,11 +92,11 @@ void init_spin_torquer(_adcs_actuator *actuator) {
     actuator->spin_torquer.m_RPM = 0;
     actuator->spin_torquer.status = MOTOR_STOP;
 
-    get_spin_state(actuator);
+    return get_spin_state(actuator);
 
 }
 
-void update_spin_torquer(_adcs_actuator *actuator) {
+_adcs_spin_status update_spin_torquer(_adcs_actuator *actuator) {
     uint8_t sendbuf[16];
 
     /* Hardware Calculation or CRC */
@@ -127,12 +127,12 @@ void update_spin_torquer(_adcs_actuator *actuator) {
     if (HAL_I2C_Mem_Write(&hi2c2, SPIN_ID, sendbuf[0], 1, &sendbuf[1], 15,
     SPIN_TIMEOUT) != HAL_OK) {
         actuator->spin_torquer.status = MOTOR_ERROR;
-        return;
+        return MOTOR_ERROR;
     }
-    get_spin_state(actuator);
+    return get_spin_state(actuator);
 }
 
-void get_spin_state(_adcs_actuator *actuator) {
+_adcs_spin_status get_spin_state(_adcs_actuator *actuator) {
     uint8_t getbuf[16];
 
     memset(getbuf, 0, 16);
@@ -140,7 +140,7 @@ void get_spin_state(_adcs_actuator *actuator) {
     if (HAL_I2C_Mem_Read(&hi2c2, SPIN_ID, getbuf[0], 1, &(getbuf[1]), 15,
     SPIN_TIMEOUT) != HAL_OK) {
         actuator->spin_torquer.status = MOTOR_ERROR;
-        return;
+        return MOTOR_ERROR;
     }
     actuator->spin_torquer.m_RPM = getbuf[8] << 24;
     actuator->spin_torquer.m_RPM |= getbuf[7] << 16;
@@ -166,4 +166,6 @@ void get_spin_state(_adcs_actuator *actuator) {
         actuator->spin_torquer.status = MOTOR_ERROR;
         break;
     }
+
+    return actuator->spin_torquer.status;
 }

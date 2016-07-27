@@ -156,20 +156,20 @@ typedef struct {
 
 extern _adcs_sensors adcs_sensors;
 
-void init_lsm9ds0_gyro(_adcs_sensors *sensors);
+_adcs_sensor_status init_lsm9ds0_gyro(_adcs_sensors *sensors);
 void calib_lsm9ds0_gyro(_adcs_sensors *sensors);
-void update_lsm9ds0_gyro(_adcs_sensors *sensors);
-void init_lsm9ds0_xm(_adcs_sensors *adcs_sensors);
-void update_lsm9ds0_xm(_adcs_sensors *sensors);
+_adcs_sensor_status update_lsm9ds0_gyro(_adcs_sensors *sensors);
+_adcs_sensor_status init_lsm9ds0_xm(_adcs_sensors *adcs_sensors);
+_adcs_sensor_status update_lsm9ds0_xm(_adcs_sensors *sensors);
 
-void init_rm3100(_adcs_sensors *sensors);
-void update_rm3100(_adcs_sensors *sensors);
+_adcs_sensor_status init_rm3100(_adcs_sensors *sensors);
+_adcs_sensor_status update_rm3100(_adcs_sensors *sensors);
 
-void init_adt7420(_adcs_sensors *sensors);
-void update_adt7420(_adcs_sensors *sensors);
+_adcs_sensor_status init_adt7420(_adcs_sensors *sensors);
+_adcs_sensor_status update_adt7420(_adcs_sensors *sensors);
 
-void init_sun_sensor(_adcs_sensors *sensors);
-void update_sun_sensor(_adcs_sensors *sensors);
+_adcs_sensor_status init_sun_sensor(_adcs_sensors *sensors);
+_adcs_sensor_status update_sun_sensor(_adcs_sensors *sensors);
 _adcs_sensor_status update_ad7682(uint8_t ch, uint16_t *v_raw);
 
 #endif /* INC_ADCS_SENSORS_H_ */

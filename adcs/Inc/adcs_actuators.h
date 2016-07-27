@@ -10,7 +10,7 @@
 
 /* Spin Torquer */
 #define SPIN_ID         0x03
-#define SPIN_TIMEOUT    1000
+#define SPIN_TIMEOUT    500
 #define MAX_RPM         40000
 #define CNT2RPM(x)      48000000*15/(x)
 #define RPM2CNT(x)      CNT2RPM(x)
@@ -52,8 +52,8 @@ extern _adcs_actuator adcs_actuator;
 
 void init_magneto_torquer(_adcs_actuator *actuator);
 void update_magneto_torquer(_adcs_actuator *actuator);
-void init_spin_torquer(_adcs_actuator *actuator);
-void get_spin_state(_adcs_actuator *actuator);
-void update_spin_torquer(_adcs_actuator *actuator);
+_adcs_spin_status init_spin_torquer(_adcs_actuator *actuator);
+_adcs_spin_status get_spin_state(_adcs_actuator *actuator);
+_adcs_spin_status update_spin_torquer(_adcs_actuator *actuator);
 
 #endif /* INC_ADCS_ACTUATORS_H_ */
