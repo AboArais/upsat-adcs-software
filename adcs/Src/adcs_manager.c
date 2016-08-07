@@ -224,6 +224,18 @@ adcs_error_status init_measured_vectors() {
 }
 
 /**
+ * Convert UTC to Decyimal year and Julian day.
+ * @return
+ */
+adcs_error_status time_converter() {
+
+    decyear(&adcs_time);
+    julday(&adcs_time);
+
+    return error_propagation(ERROR_OK);
+}
+
+/**
  * Update reference vectors, IGRF and sun position vectors
  * @return
  */

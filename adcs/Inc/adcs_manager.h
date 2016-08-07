@@ -45,6 +45,7 @@ adcs_error_status update_sgp4();
 adcs_error_status init_actuators();
 adcs_error_status update_actuators();
 void magneto_torquer_off();
+adcs_error_status time_converter();
 adcs_error_status update_reference_vectors();
 adcs_error_status init_measured_vectors();
 adcs_error_status update_measured_vectors();
