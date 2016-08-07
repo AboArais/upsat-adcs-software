@@ -18,11 +18,12 @@ typedef struct {
 struct time_utc utc;
 
 typedef struct {
+    uint8_t set_time;
     struct time_utc utc;
     _tle_epoch tle_epoch; // TLE epoch
     double decyear; // Decimal year, for IGRF
     double jd; // Julian days from 1st Jan 1900, for SGP4
-    double gps_time; // Time in sec of "gps_week" week
+    double gps_sec; // Time in sec of "gps_week" week
     uint16_t gps_week; // Number of weeks from GPS starting date
 } time_keeping_adcs;
 

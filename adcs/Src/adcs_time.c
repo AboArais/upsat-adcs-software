@@ -12,7 +12,12 @@
 #include "adcs_time.h"
 #include "adcs_common.h"
 
-time_keeping_adcs adcs_time;
+time_keeping_adcs adcs_time = { .set_time = false, .utc.year = 0, .utc.month = 0,
+                                .utc.day = 0, .utc.hour = 0, .utc.min = 0,
+                                .utc.sec = 0, .utc.weekday = 0,
+                                .tle_epoch.ep_year = 0, .tle_epoch.ep_day = 0,
+                                .decyear = 0.0, .jd = 0.0, .gps_sec = 0.0,
+                                .gps_sec = 0.0, .gps_week = 0.0 };
 
 /**
  * Conversion from UTC date to decimal year
@@ -50,6 +55,7 @@ void tle_epoch(time_keeping_adcs *t) {
             + (t->utc.min / SOLAR_DAY_MIN) + (t->utc.sec / SOLAR_DAY_SEC);
 
 }
+
 /**
  * Conversion from UTC date to Julian days from 1st Jan 1900
  * Reference:
@@ -80,7 +86,7 @@ void julday(time_keeping_adcs *t) {
 
 /**
  * Conversion from GPS time and week to UTC.
- * In calculation we take into acount leap seconds.
+ * In calculation we take into account leap seconds.
  * @param t
  */
 void gps2utc(time_keeping_adcs *t) {
@@ -88,7 +94,7 @@ void gps2utc(time_keeping_adcs *t) {
     double tmp_hour, tmp_min, UT = 0;
     volatile uint32_t iJD, L, N, tmp_year, tmp_month, tmp_day = 0;
 
-    t->jd = (t->gps_week + (t->gps_time - LEAP_SECOND) / 604800.0)
+    t->jd = (t->gps_week + (t->gps_sec - LEAP_SECOND) / 604800.0)
             * 7.0 + JULIAN_GPS_TIME;
 
     iJD = (uint32_t) (t->jd + 0.5);
