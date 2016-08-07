@@ -22,10 +22,12 @@
 #define XM_ID           0x49
 #define XM_VAL          0x08
 #define XM_GAIN         8           // nT
+#define XM_THRESHOLD    10000       // Threshold to check the values of magneto meter
 
 #define LSM9DS0_TIMEOUT 500
 #define LSM9DS0_MASK    0x80
 /* Gyroscope offsets */
+#define AUTO_GYRO_CALIB 0
 #define GYRO_N          100         // Calculate gyroscope offset
 #define GYRO_OFFSET_X   -54.68
 #define GYRO_OFFSET_Y   42.2
@@ -58,9 +60,11 @@
 #define STATUS_MASK     0x80    // To get status of data ready
 #define PNI_CyclesMSB   0x00
 #define PNI_CyclesLSB   0xC8
-#define PNI_GAIN        1e3/75  // Convert to nT 1e3/75
+#define PNI_GAIN        1e3/75.0  // Convert to nT 1e3/75
 #define PNI_DEFAULT_ID  0x22
 #define PNI_TIMEOUT     500
+#define PNI_THRESHOLD   10000     // Threshold to check the values of magneto meter
+
 
 /* ADT7420 temperature sensor */
 #define ADT7420_ADDRESS             0x48    // ADT7420 address, IC2
@@ -78,7 +82,7 @@
 #define ADT7420_REG_HIST            0x0A    // Temperature HYST set point
 #define ADT7420_REG_ID              0x0B    // ID
 #define ADT7420_REG_RESET           0x2F    // Software reset
-#define ADT7420_TIMEOUT             100
+#define ADT7420_TIMEOUT             500
 /* ADT7420 configure */
 #define ADT7420_16BIT               0x80
 #define ADT7420_OP_MODE_1_SPS       0x40
@@ -102,9 +106,12 @@
 /* Sun Sensor Coefficient */
 #define SUN_SENSOR_VALID    0.7 // Threshold for valid values
 #define S_SUN_SENSOR        5   // For fine measure, 5-8
+#define SUN_FINE            0   // 1 for fine measurements
 
 /* LP Filter */
-#define A_FILTER 0.7 // Coefficient < 1.0
+#define A_GYRO 0.7  // Coefficient < 1.0
+#define A_MGN 0.7   // Coefficient < 1.0
+#define A_XM 0.7    // Coefficient < 1.0
 
 typedef enum {
     DEVICE_ERROR = 0, DEVICE_NORMAL, DEVICE_ENABLE, DEVICE_DISABLE
@@ -119,6 +126,7 @@ typedef struct {
 typedef struct {
     int16_t gyr_raw[3];
     float gyr[3];
+    float gyr_prev[3];
     float gyr_f[3];
     float calib_gyr[3];
     _adcs_sensor_status gyr_status;
@@ -126,6 +134,7 @@ typedef struct {
     int16_t xm_raw[3];
     float xm_norm;
     float xm[3];
+    float xm_prev[3];
     float xm_f[3];
     _adcs_sensor_status xm_status;
 } _lsm9ds0_sensor;
@@ -134,6 +143,7 @@ typedef struct {
     int32_t rm_raw[3];
     float rm_norm;
     float rm[3];
+    float rm_prev[3];
     float rm_f[3];
     _adcs_sensor_status rm_status;
 } _rm3100_sensor;

@@ -10,8 +10,8 @@
 
 /* Spin Torquer */
 #define SPIN_ID         0x03
-#define SPIN_TIMEOUT    500
-#define MAX_RPM         40000
+#define SPIN_TIMEOUT    10000
+#define MAX_RPM         20000
 #define CNT2RPM(x)      48000000*15/(x)
 #define RPM2CNT(x)      CNT2RPM(x)
 /* MOTOR In sync to bridge pulses, but not locked  yet to reference RPM (MOTOR_INSYNC)
@@ -37,8 +37,8 @@ typedef struct {
 #define MAX_CURR_MAGNETO_TORQUER    37      // in mA
 
 typedef struct {
-    int32_t current_z;
-    int32_t current_y;
+    int8_t current_z;
+    int8_t current_y;
     uint32_t duty_cycle_z;
     uint32_t duty_cycle_y;
 } _adcs_magneto;
@@ -52,6 +52,7 @@ extern _adcs_actuator adcs_actuator;
 
 void init_magneto_torquer(_adcs_actuator *actuator);
 void update_magneto_torquer(_adcs_actuator *actuator);
+void magneto_torquer_off();
 _adcs_spin_status init_spin_torquer(_adcs_actuator *actuator);
 _adcs_spin_status get_spin_state(_adcs_actuator *actuator);
 _adcs_spin_status update_spin_torquer(_adcs_actuator *actuator);

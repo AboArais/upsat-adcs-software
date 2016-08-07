@@ -54,13 +54,15 @@ void update_magneto_torquer(_adcs_actuator *actuator) {
         actuator->magneto_torquer.duty_cycle_z =
                 actuator->magneto_torquer.current_z * MAGNETO_TORQUER_RESISTANCE
                         * MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
+
         htim4.Instance->CCR1 = actuator->magneto_torquer.duty_cycle_z;
         htim4.Instance->CCR2 = 0;
-    } else if (actuator->magneto_torquer.current_z < 0) {
+    } else {
         actuator->magneto_torquer.duty_cycle_z =
                 -actuator->magneto_torquer.current_z
                         * MAGNETO_TORQUER_RESISTANCE * MAGNETO_TORQUER_PERIOD
                         / MAX_VOLT_MAGNETO_TORQUER;
+
         htim4.Instance->CCR1 = 0;
         htim4.Instance->CCR2 = actuator->magneto_torquer.duty_cycle_z;
     }
@@ -72,13 +74,15 @@ void update_magneto_torquer(_adcs_actuator *actuator) {
         actuator->magneto_torquer.duty_cycle_y =
                 actuator->magneto_torquer.current_y * MAGNETO_TORQUER_RESISTANCE
                         * MAGNETO_TORQUER_PERIOD / MAX_VOLT_MAGNETO_TORQUER;
+
         htim4.Instance->CCR3 = actuator->magneto_torquer.duty_cycle_y;
         htim4.Instance->CCR4 = 0;
-    } else if (actuator->magneto_torquer.current_y < 0) {
+    } else {
         actuator->magneto_torquer.duty_cycle_y =
                 -actuator->magneto_torquer.current_y
                         * MAGNETO_TORQUER_RESISTANCE * MAGNETO_TORQUER_PERIOD
                         / MAX_VOLT_MAGNETO_TORQUER;
+
         htim4.Instance->CCR3 = 0;
         htim4.Instance->CCR4 = actuator->magneto_torquer.duty_cycle_y;
     }
@@ -99,6 +103,17 @@ _adcs_spin_status init_spin_torquer(_adcs_actuator *actuator) {
 _adcs_spin_status update_spin_torquer(_adcs_actuator *actuator) {
     uint8_t sendbuf[16];
 
+    /* Check if RPM is 0 to set 10, look RPM2CNT */
+    if (actuator->spin_torquer.RPM == 0){
+        actuator->spin_torquer.RPM = 10;
+    /* Check the limits of RPM */
+    } else if (actuator->spin_torquer.RPM > MAX_RPM) {
+        actuator->spin_torquer.RPM = MAX_RPM;
+    } else if (actuator->spin_torquer.RPM < -MAX_RPM) {
+        actuator->spin_torquer.RPM = -MAX_RPM;
+    }
+
+    memset(sendbuf, 0, 16);
     /* Hardware Calculation or CRC */
     uint32_t cbuf[3] = { actuator->spin_torquer.status, RPM2CNT(
             actuator->spin_torquer.RPM), actuator->spin_torquer.rampTime };
@@ -133,22 +148,22 @@ _adcs_spin_status update_spin_torquer(_adcs_actuator *actuator) {
 }
 
 _adcs_spin_status get_spin_state(_adcs_actuator *actuator) {
-    uint8_t getbuf[16];
+    uint8_t getbuf[17];
 
-    memset(getbuf, 0, 16);
+    memset(getbuf, 0, 17);
 
     if (HAL_I2C_Mem_Read(&hi2c2, SPIN_ID, getbuf[0], 1, &(getbuf[1]), 15,
     SPIN_TIMEOUT) != HAL_OK) {
         actuator->spin_torquer.status = MOTOR_ERROR;
         return MOTOR_ERROR;
     }
-    actuator->spin_torquer.m_RPM = getbuf[8] << 24;
-    actuator->spin_torquer.m_RPM |= getbuf[7] << 16;
-    actuator->spin_torquer.m_RPM |= getbuf[6] << 8;
-    actuator->spin_torquer.m_RPM |= getbuf[5] << 0;
+    actuator->spin_torquer.m_RPM = getbuf[9] << 24;
+    actuator->spin_torquer.m_RPM |= getbuf[8] << 16;
+    actuator->spin_torquer.m_RPM |= getbuf[7] << 8;
+    actuator->spin_torquer.m_RPM |= getbuf[6] << 0;
     actuator->spin_torquer.m_RPM = CNT2RPM(actuator->spin_torquer.m_RPM);
 
-    switch (getbuf[1]) {
+    switch (getbuf[2]) {
     case 1:
         actuator->spin_torquer.status = MOTOR_INSYNC;
         break;
