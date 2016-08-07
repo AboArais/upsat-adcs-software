@@ -23,9 +23,9 @@ typedef enum {
 } adcs_error_status;
 
 extern adcs_error_status error_status;
-
 extern uint8_t trasmit_error_status;
 
 void error_handler(adcs_error_status error);
+adcs_error_status error_propagation(adcs_error_status current_error);
 
 #endif /* ADCS_ERROR_HANDLER_H_ */

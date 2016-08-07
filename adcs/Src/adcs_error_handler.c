@@ -7,7 +7,7 @@
 
 #include "stm32f4xx_hal.h"
 #include "adcs_error_handler.h"
-#include "adcs_switch.h"
+#include "adcs_manager.h"
 
 #define TR_ERROR_OK         0x05
 #define TR_ERROR_USRESOLVED 0x10
@@ -22,17 +22,18 @@
 
 extern IWDG_HandleTypeDef hiwdg;
 
-adcs_error_status error_status;
+adcs_error_status error_status = ERROR_OK;
 uint8_t trasmit_error_status;
 
+static uint8_t wdg_error_cnt = 0;
+
 /**
- * @brief Checks the status, if it is a known issue from the enumeration, tries
+ * Checks the status, if it is a known issue from the enumeration, tries
  * to solve it in software else a soft reset is trigerred. if the error status
  * is ok, the watchdog is updated.
- * @param error
+ * @param error Error status is enumeration.
  */
 void error_handler(adcs_error_status error) {
-
     switch (error) {
     case ERROR_OK:
         HAL_IWDG_Refresh(&hiwdg);
@@ -54,36 +55,37 @@ void error_handler(adcs_error_status error) {
         trasmit_error_status = TR_ERROR_TIME;
         break;
     case ERROR_SENSOR:
-        /* Close the power of sensors */
-        HAL_IWDG_Refresh(&hiwdg);
-        adcs_pwr_switch(SWITCH_OFF, SENSORS);
-        trasmit_error_status = TR_ERROR_SENSOR;
-        HAL_Delay(10);
-        adcs_pwr_switch(SWITCH_ON, SENSORS);
-        break;
     case ERROR_ACTUATOR:
-        HAL_IWDG_Refresh(&hiwdg);
-        /* Software reset of I2C */
-        GPIOB->BSRR = GPIO_PIN_10 | GPIO_PIN_11;
-        uint8_t i = 8;
-        while ((i--) && ((GPIOB->IDR & GPIO_PIN_11) == 0)) {
-            HAL_Delay(1);
-            GPIOB->BSRR = (uint32_t)GPIO_PIN_10 << 16U;
-            HAL_Delay(1);
-            GPIOB->BSRR = GPIO_PIN_10;
+        /* Both devices are in the same I2C bus */
+        wdg_error_cnt += 1;
+        if (wdg_error_cnt < WDG_REFRESH) {
+            HAL_IWDG_Refresh(&hiwdg);
         }
-        trasmit_error_status = TR_ERROR_ACTUATOR;
+        if (error == ERROR_SENSOR) {
+            trasmit_error_status = TR_ERROR_SENSOR;
+        } else {
+            trasmit_error_status = TR_ERROR_ACTUATOR;
+        }
+        /* Close the power of sensors */
+        for(uint16_t i = 0; i < 250; i++){
+            adcs_pwr_switch(SWITCH_ON, SENSORS);
+            HAL_Delay(1);
+            adcs_pwr_switch(SWITCH_OFF, SENSORS);
+            HAL_Delay(1);
+        }
+        /* Initialize sensors */
+        init_measured_vectors();
         break;
     case ERROR_FLASH:
         HAL_IWDG_Refresh(&hiwdg);
         trasmit_error_status = TR_ERROR_FLASH;
-        // Send to OBC command to open GPS
         break;
     case ERROR_GPS:
         HAL_IWDG_Refresh(&hiwdg);
         trasmit_error_status = TR_ERROR_GPS;
-        adcs_pwr_switch(SWITCH_OFF, GPS);
-        // Send to OBC command to open GPS
+        break;
+    case ERROR_HAL_INIT:
+        trasmit_error_status = TR_ERROR_HAL_INIT;
         break;
     case ERROR_UNRESOLVED:
         trasmit_error_status = TR_ERROR_USRESOLVED;
@@ -91,5 +93,17 @@ void error_handler(adcs_error_status error) {
     default:
         break;
     }
+}
 
+/**
+ * Get the current error status and if it's OK return previous error status else
+ * return the current error status.
+ * @param error Error status is enumeration.
+ * @return Error status is enumeration.
+ */
+adcs_error_status error_propagation(adcs_error_status current_error) {
+    if (current_error == ERROR_OK) {
+        return error_status;
+    }
+    return current_error;
 }
