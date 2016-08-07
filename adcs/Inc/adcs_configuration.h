@@ -27,7 +27,7 @@
 #define GPS_ALARM_UNLOCK    12 // in min
 #define GPS_ALARM_RESET     8  // in min
 
-#define WDG_REFRESH         5
+#define WDG_REFRESH         50 // Times for reset (WDG)
 
 typedef enum {
     TIMED_EVENT_SERVICED = 0,
