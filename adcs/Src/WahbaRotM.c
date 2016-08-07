@@ -16,13 +16,13 @@ WahbaRotMStruct WahbaRot;
 
 void initWahbaStruct(WahbaRotMStruct *WStruct, real dt) {
 
-    WStruct->w_m[0] = 0.707;
+    WStruct->w_m[0] = 0;
     WStruct->w_m[1] = 0;
-    WStruct->w_m[2] = 0.707;
+    WStruct->w_m[2] = 0;
 
     WStruct->w_a[0] = 0;
     WStruct->w_a[1] = 0;
-    WStruct->w_a[2] = -1.0;
+    WStruct->w_a[2] = 0;
 
     WStruct->w_g[0] = -0.707;
     WStruct->w_g[1] = 0.0;
@@ -55,9 +55,9 @@ volatile real Rr[3][3];
 void WahbaRotM(float acc[3], float gyr[3], float mag[3], WahbaRotMStruct *WStruct) {
     static float a, g, ga, gm, m, A[3][3], dt;
     real (*RotM)[3];
-    a = 0.05;
-    m = 0.05;
-    g = 0.95;
+    a = WStruct->sun_sensor_gain;
+    m = 1;
+    g = 0.0;
     ga = 1 - a;
     gm = 1 - m;
 
@@ -76,7 +76,9 @@ void WahbaRotM(float acc[3], float gyr[3], float mag[3], WahbaRotMStruct *WStruc
 
     real accn[3], magn[3], An, Mn;
     An = normV(acc);
+    if (An == 0) { An = 1; }
     Mn = normV(mag);
+    if (Mn == 0) { Mn = 1; }
     for (int i = 0; i < 3; i++) {
         accn[i] = acc[i] / An;
         magn[i] = mag[i] / Mn;

@@ -62,6 +62,7 @@ typedef struct {
     real g_va[3];
     real g_vm[3];
     real q[4];
+    real sun_sensor_gain;
     float RotM[3][3];
     real RotM_prev[3][3];
     real dR[3][3];
