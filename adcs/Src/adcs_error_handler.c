@@ -67,11 +67,23 @@ void error_handler(adcs_error_status error) {
             trasmit_error_status = TR_ERROR_ACTUATOR;
         }
         /* Close the power of sensors */
-        for(uint16_t i = 0; i < 250; i++){
+        for (uint8_t i = 0; i < 250; i++) {
             adcs_pwr_switch(SWITCH_ON, SENSORS);
             HAL_Delay(1);
             adcs_pwr_switch(SWITCH_OFF, SENSORS);
             HAL_Delay(1);
+        }
+        /* Software I2C reset */
+        for (uint8_t i = 0; i < 8; i++) {
+            uint8_t read_sda_pin = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11);
+            if (read_sda_pin == GPIO_PIN_RESET) {
+                HAL_Delay(1);
+                GPIOB->BSRR = GPIO_PIN_10; //SET
+                HAL_Delay(1);
+                GPIOB->BSRR = (uint32_t) GPIO_PIN_11 << 16U; // RESET
+            } else {
+                break;
+            }
         }
         /* Initialize sensors */
         init_measured_vectors();
