@@ -24,7 +24,6 @@ typedef struct {
 
 extern geomag_vector igrf_vector;
 
-void init_geomag(geomag_vector *gStr);
-uint8_t geomag(geomag_vector *gStr);
+void geomag(geomag_vector *gStr);
 
 #endif /* GEOMAG_H_ */

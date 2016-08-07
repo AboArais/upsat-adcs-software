@@ -28,8 +28,6 @@
 
 #define TLE_SIZE 145
 #define TLE_LINE2_OFFSET 69+1
-#define TLE_BASE_ADDRESS 0x00F000
-#define TLE_ADDRESS_OFFSET 1
 
 typedef struct orbit_s {
     /* Add the epoch time if required. */
@@ -63,7 +61,7 @@ typedef enum {
     TLE_NORMAL = 0, TLE_ERROR
 } tle_status;
 
-extern orbit_t upsat_tle;
+extern orbit_t upsat_tle, temp_tle;
 extern uint8_t tle_string[TLE_SIZE];
 extern xyz_t p_eci, v_eci;
 

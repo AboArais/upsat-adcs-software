@@ -72,9 +72,16 @@
 #include "service_utilities.h"
 
 /* Global Variables */
-orbit_t upsat_tle;
-uint8_t tle_string[TLE_SIZE];
-xyz_t p_eci, v_eci;
+orbit_t upsat_tle = { .argp = 0, .ascn = 0, .bstar = 0, .ecc = 0, .ep_day = 0,
+        .ep_year = 0, .eqinc = 0, .mnan = 0, .norb = 0, .rev = 0, .satno = 0,
+        .smjaxs = 0 };
+
+orbit_t temp_tle = { .argp = 0, .ascn = 0, .bstar = 0, .ecc = 0, .ep_day = 0,
+        .ep_year = 0, .eqinc = 0, .mnan = 0, .norb = 0, .rev = 0, .satno = 0,
+        .smjaxs = 0 };
+xyz_t p_eci = {.x = 0, .y = 0, .z = 0};
+xyz_t v_eci = {.x = 0, .y = 0, .z = 0};
+
 /********************/
 
 typedef struct kep_s {
@@ -299,9 +306,9 @@ static double xnodp, xmdot;
 static uint32_t Isat = 0; /* 16-bit compilers need 'long' integer for higher space catalogue numbers. */
 double perigee, period, apogee;
 
-uint32_t Icount = 0;
-uint8_t MaxNR = 0;
-uint8_t Set_LS_zero = 0; /* Set to 1 to zero Lunar-Solar terms at epoch. */
+static uint32_t Icount = 0;
+static uint8_t MaxNR = 0;
+static uint8_t Set_LS_zero = 0; /* Set to 1 to zero Lunar-Solar terms at epoch. */
 
 /* ==================================================================== */
 
@@ -495,7 +502,7 @@ tle_status update_tle(orbit_t *tle, orbit_t new_tle) {
 
     switch (tle_status_value) {
     case TLE_ERROR:
-        // Not update the TLE and init again sgp4 with old TLE
+        // Not update the TLE and init again sgp4 with the previous TLE
         init_sgp4(tle);
         break;
     case TLE_NORMAL:
@@ -542,10 +549,9 @@ flash_status flash_write_tle(orbit_t *flash_tle) {
     cnv16_8(flash_tle->ep_year, &tle_data[tle_cnt]);
     tle_cnt += 2;
     cnv32_8(flash_tle->norb, &tle_data[tle_cnt]);
-    tle_cnt += 4;
 
     if (flash_erase_block4K(TLE_BASE_ADDRESS) == FLASH_NORMAL) {
-        flash_write_page(tle_data, TLE_BASE_ADDRESS);
+        flash_write_page(tle_data, sizeof(tle_data), TLE_BASE_ADDRESS);
     } else { return FLASH_ERROR; }
 
     return FLASH_NORMAL;
@@ -636,27 +642,6 @@ flash_status flash_read_tle(orbit_t *flash_tle) {
     cnv8_32(tle_data, &flash_tle->norb);
 
     return FLASH_NORMAL;
-}
-
-void init_satpos_xyz() {
-
-    upsat_tle.argp = 0;
-    upsat_tle.ascn = 0;
-    upsat_tle.bstar = 0;
-    upsat_tle.ecc = 0;
-    upsat_tle.ep_day = 0;
-    upsat_tle.ep_year = 0;
-    upsat_tle.eqinc = 0;
-    upsat_tle.mnan = 0;
-    upsat_tle.norb =0;
-    upsat_tle.rev = 0;
-    upsat_tle.satno = 0;
-    upsat_tle.smjaxs = 0;
-    memset(tle_string, 0, TLE_SIZE);
-
-    p_eci.x = 0; p_eci.y = 0; p_eci.z = 0;
-    v_eci.x = 0; v_eci.y = 0; v_eci.y = 0;
-
 }
 
 /* ======================================================================
@@ -1615,14 +1600,14 @@ static void rv2coe(double r[3], double v[3], double mu, double *p, double *a,
         strcpy(typeorbit, "ei");
         if (*ecc < small) {
             // ----------------  circular equatorial ---------------
-            if ((*incl < small) | (fabs(*incl - PI) < small))
+            if ((*incl < small) || (fabs(*incl - PI) < small))
                 strcpy(typeorbit, "ce");
             else
                 // --------------  circular inclined ---------------
                 strcpy(typeorbit, "ci");
         } else {
             // - elliptical, parabolic, hyperbolic equatorial --
-            if ((*incl < small) | (fabs(*incl - PI) < small))
+            if ((*incl < small) || (fabs(*incl - PI) < small))
                 strcpy(typeorbit, "ee");
         }
 

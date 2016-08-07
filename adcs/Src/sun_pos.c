@@ -4,17 +4,9 @@
 #include "sun_pos.h"
 #include "adcs_common.h"
 
-_sun_vector sun_vector;
-
-void init_sun(_sun_vector *sStr) {
-    sStr->JD_epoch = 0;
-    sStr->sun_pos.x = 0;
-    sStr->sun_pos.y = 0;
-    sStr->sun_pos.z = 0;
-    sStr->norm = 0;
-    sStr->decl = 0;
-    sStr->rtasc = 0;
-}
+_sun_vector sun_vector = { .JD_epoch = 0, .sun_pos_eci.x = 0, .sun_pos_eci.y = 0,
+                .sun_pos_eci.z = 0, .sun_pos_ned.x = 0, .sun_pos_ned.y = 0,
+                .sun_pos_ned.z = 0, .norm = 0, .decl = 0, .rtasc = 0 };
 
 /* ------------------------------------------------------------------------------
  *
@@ -62,7 +54,7 @@ void init_sun(_sun_vector *sStr) {
  *    vallado       2007, 281, alg 29, ex 5-1
  * --------------------------------------------------------------------------- */
 
-void sun(_sun_vector *sStr) {
+void update_sun(_sun_vector *sStr) {
     double tut1, meanlong, ttdb, meananomaly, eclplong, obliquity, magr;
 
     // -------------------------  implementation   -----------------
@@ -92,9 +84,9 @@ void sun(_sun_vector *sStr) {
     magr = 1.000140612 - 0.016708617 * cos(meananomaly)
             - 0.000139589 * cos(2.0 * meananomaly); // in au's
 
-    sStr->sun_pos.x = magr * cos(eclplong);
-    sStr->sun_pos.y = magr * cos(obliquity) * sin(eclplong);
-    sStr->sun_pos.z = magr * sin(obliquity) * sin(eclplong);
+    sStr->sun_pos_eci.x = magr * cos(eclplong);
+    sStr->sun_pos_eci.y = magr * cos(obliquity) * sin(eclplong);
+    sStr->sun_pos_eci.z = magr * sin(obliquity) * sin(eclplong);
 
     sStr->rtasc = atan(cos(obliquity) * tan(eclplong));
 

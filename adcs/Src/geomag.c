@@ -110,15 +110,19 @@
 #include "geomag.h"
 #include "adcs_common.h"
 
+geomag_vector igrf_vector = { .sdate = 0, .latitude = 0, .longitude = 0, .alt =
+        0, .Xm = 0, .Ym = 0, .Zm = 0, .norm = 0, .decl = 0, .incl = 0, .h = 0,
+        .f = 0 };
+
 static int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2,
         int gh);
 static int extrapsh(double date, double dte1, int nmax1, int nmax2, int gh);
-static int shval3(int igdgc, double flat, double flon, double elev, int nmax,
+static int shval3(uint8_t igdgc, double flat, double flon, double elev, int nmax,
         int gh, int iext, double ext1, double ext2, double ext3);
 static int dihf(int gh);
 static int getshc(int iflag, int nmax_of_gh, int gh);
 
-static float COEFF1[] = { -29442.00, -1501.00, -2445.10, 3012.90, 1676.70,
+static const float COEFF1[] = { -29442.00, -1501.00, -2445.10, 3012.90, 1676.70,
         1350.70, -2352.30, 1225.60, 582.00, 907.60, 813.70, 120.40, -334.90,
         70.40, -232.60, 360.10, 192.40, -140.90, -157.50, 4.10, 70.00, 67.70,
         72.70, -129.90, -28.90, 13.20, -70.90, 81.60, -76.10, -6.80, 51.80,
@@ -130,7 +134,7 @@ static float COEFF1[] = { -29442.00, -1501.00, -2445.10, 3012.90, 1676.70,
         0.50, -0.30, -0.40, 0.20, -0.90, 0.00, 0.00, -0.90, 0.40, 0.50, -0.50,
         1.00, -0.20, 0.80, -0.10, 0.30, 0.10, 0.50, -0.40, -0.30 };
 
-static float COEFF2[] = { 0.00, 4797.10, 0.00, -2845.60, -641.90, 0.00, -115.30,
+static const float COEFF2[] = { 0.00, 4797.10, 0.00, -2845.60, -641.90, 0.00, -115.30,
         244.90, -538.40, 0.00, 283.30, -188.70, 180.90, -329.50, 0.00, 47.30,
         197.00, -119.30, 16.00, 100.20, 0.00, -20.80, 33.20, 58.90, -66.70,
         7.30, 62.60, 0.00, -54.10, -19.50, 5.70, 24.40, 3.40, -27.40, -2.20,
@@ -142,7 +146,7 @@ static float COEFF2[] = { 0.00, 4797.10, 0.00, -2845.60, -641.90, 0.00, -115.30,
         -0.90, -0.10, 0.70, 0.00, -0.90, 0.40, 1.60, -0.50, -1.20, -0.10, 0.40,
         -0.10, 0.40, 0.50, -0.30, -0.40, -0.80 };
 
-static float COEFF3[] = { 10.30, 18.10, -8.70, -3.30, 2.10, 3.40, -5.50, -0.70,
+static const float COEFF3[] = { 10.30, 18.10, -8.70, -3.30, 2.10, 3.40, -5.50, -0.70,
         -10.10, -0.70, 0.20, -9.10, 4.10, -4.30, -0.20, 0.50, -1.30, -0.10,
         1.40, 3.90, -0.30, -0.10, -0.70, 2.10, -1.20, 0.30, 1.60, 0.30, -0.20,
         -0.50, 1.30, 0.10, -0.60, -0.80, 0.20, 0.20, 0.00, -0.60, 0.50, -0.20,
@@ -153,7 +157,7 @@ static float COEFF3[] = { 10.30, 18.10, -8.70, -3.30, 2.10, 3.40, -5.50, -0.70,
         0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00,
         0.00, 0.00, 0.00, 0.00 };
 
-static float COEFF4[] = { 0.00, -26.60, 0.00, -27.40, -14.10, 0.00, 8.20, -0.40,
+static const float COEFF4[] = { 0.00, -26.60, 0.00, -27.40, -14.10, 0.00, 8.20, -0.40,
         1.80, 0.00, -1.30, 5.30, 2.90, -5.20, 0.00, 0.60, 1.70, -1.20, 3.40,
         0.00, 0.00, 0.00, -2.10, -0.70, 0.20, 0.90, 1.00, 0.00, 0.80, 0.40,
         -0.20, -0.30, -0.60, 0.10, -0.20, 0.00, -0.30, 0.30, 0.10, 0.50, -0.20,
@@ -163,14 +167,6 @@ static float COEFF4[] = { 0.00, -26.60, 0.00, -27.40, -14.10, 0.00, 8.20, -0.40,
         0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00,
         0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00,
         0.00, 0.00, 0.00 };
-
-double PREV_SDATE = 0;
-
-geomag_vector igrf_vector;
-
-int my_isnan(double d) {
-    return (d != d); // IEEE: only NaN is not equal to itself
-}
 
 #define IEXT    0
 #define FALSE   0
@@ -183,29 +179,15 @@ int my_isnan(double d) {
 
 #define MAXDEG 13
 #define MAXCOEFF (MAXDEG*(MAXDEG+2)+1) /* index starts with 1!, (from old Fortran?) */
-double gh1[MAXCOEFF];
-double gh2[MAXCOEFF];
-double gha[MAXCOEFF]; /* Geomag global variables */
-double ghb[MAXCOEFF];
-double d = 0, f = 0, h = 0, i = 0;
-double dtemp, ftemp, htemp, itemp;
-double x = 0, y = 0, z = 0;
-double xtemp, ytemp, ztemp;
-
-void init_geomag(geomag_vector *gStr) {
-    gStr->sdate = 0;
-    gStr->latitude = 0;
-    gStr->longitude = 0;
-    gStr->alt = 0;
-    gStr->Xm = 0;
-    gStr->Ym = 0;
-    gStr->Zm = 0;
-    gStr->norm = 0;
-    gStr->decl = 0;
-    gStr->incl = 0;
-    gStr->h = 0;
-    gStr->f = 0;
-}
+static double gh1[MAXCOEFF];
+static double gh2[MAXCOEFF];
+static double gha[MAXCOEFF]; /* Geomag global variables */
+static double ghb[MAXCOEFF];
+static double d = 0, f = 0, h = 0, i = 0;
+static double dtemp, ftemp, htemp, itemp;
+static double x = 0, y = 0, z = 0;
+static double xtemp, ytemp, ztemp;
+static double PREV_SDATE = 0;
 
 /****************************************************************************/
 /*                                                                          */
@@ -316,7 +298,7 @@ void init_geomag(geomag_vector *gStr) {
 /*   yrmin      Double array of MAXMOD  Min year of model.                  */
 /*                                                                          */
 /****************************************************************************/
-uint8_t geomag(geomag_vector *gStr) {
+void geomag(geomag_vector *gStr) {
     /*  Variable declaration  */
 
     double sdate = gStr->sdate;
@@ -325,7 +307,7 @@ uint8_t geomag(geomag_vector *gStr) {
     double alt = gStr->alt;
 
     /* Control variables */
-    int igdgc = 2; /* GEOCENTRIC */
+    uint8_t igdgc = 2; /* GEOCENTRIC */
 
     static int max1;
     static int max2;
@@ -407,8 +389,6 @@ uint8_t geomag(geomag_vector *gStr) {
     gStr->incl = i;
     gStr->h = h;
     gStr->f = f;
-
-    return 0;
 }
 
 /****************************************************************************/
@@ -751,7 +731,7 @@ static int interpsh(double date, double dte1, int nmax1, double dte2, int nmax2,
 /*           August 17, 1988                                                */
 /*                                                                          */
 /****************************************************************************/
-static int shval3(int igdgc, double flat, double flon, double elev, int nmax,
+static int shval3(uint8_t igdgc, double flat, double flon, double elev, int nmax,
         int gh, int iext, double ext1, double ext2, double ext3) {
     double earths_radius = 6371.2;
     double dtr = 0.01745329;
