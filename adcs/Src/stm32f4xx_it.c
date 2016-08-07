@@ -39,6 +39,8 @@
 
 #include "adcs_configuration.h"
 #include "adcs_gps.h"
+#include "adcs_hal.h"
+#include "sysview.h"
 
 /* USER CODE END 0 */
 
@@ -62,12 +64,12 @@ extern UART_HandleTypeDef huart2;
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+//  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   HAL_SYSTICK_IRQHandler();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-
+//  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SysTick_IRQn 1 */
 }
 
@@ -84,11 +86,11 @@ void SysTick_Handler(void)
 void DMA1_Stream6_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END DMA1_Stream6_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart2_tx);
   /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END DMA1_Stream6_IRQn 1 */
 }
 
@@ -98,11 +100,11 @@ void DMA1_Stream6_IRQHandler(void)
 void I2C2_EV_IRQHandler(void)
 {
   /* USER CODE BEGIN I2C2_EV_IRQn 0 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END I2C2_EV_IRQn 0 */
   HAL_I2C_EV_IRQHandler(&hi2c2);
   /* USER CODE BEGIN I2C2_EV_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END I2C2_EV_IRQn 1 */
 }
 
@@ -112,11 +114,11 @@ void I2C2_EV_IRQHandler(void)
 void SPI1_IRQHandler(void)
 {
   /* USER CODE BEGIN SPI1_IRQn 0 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SPI1_IRQn 0 */
   HAL_SPI_IRQHandler(&hspi1);
   /* USER CODE BEGIN SPI1_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SPI1_IRQn 1 */
 }
 
@@ -126,11 +128,11 @@ void SPI1_IRQHandler(void)
 void SPI2_IRQHandler(void)
 {
   /* USER CODE BEGIN SPI2_IRQn 0 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SPI2_IRQn 0 */
   HAL_SPI_IRQHandler(&hspi2);
   /* USER CODE BEGIN SPI2_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END SPI2_IRQn 1 */
 }
 
@@ -140,11 +142,12 @@ void SPI2_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
+  SEGGER_SYSVIEW_RecordEnterISR();
   HAL_ADCS_UART_IRQHandler(&huart2);
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END USART2_IRQn 1 */
 }
 
@@ -154,11 +157,12 @@ void USART2_IRQHandler(void)
 void RTC_Alarm_IRQHandler(void)
 {
   /* USER CODE BEGIN RTC_Alarm_IRQn 0 */
-  HAL_GPS_Alarm_Handler(gps_state.status);
+  SEGGER_SYSVIEW_RecordEnterISR();
+  HAL_GPS_Alarm_Handler(&gps_state);
   /* USER CODE END RTC_Alarm_IRQn 0 */
   HAL_RTC_AlarmIRQHandler(&hrtc);
   /* USER CODE BEGIN RTC_Alarm_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END RTC_Alarm_IRQn 1 */
 }
 
@@ -168,11 +172,12 @@ void RTC_Alarm_IRQHandler(void)
 void UART4_IRQHandler(void)
 {
   /* USER CODE BEGIN UART4_IRQn 0 */
+  SEGGER_SYSVIEW_RecordEnterISR();
   HAL_GPS_UART_IRQHandler(&huart4);
   /* USER CODE END UART4_IRQn 0 */
   HAL_UART_IRQHandler(&huart4);
   /* USER CODE BEGIN UART4_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END UART4_IRQn 1 */
 }
 
@@ -182,11 +187,12 @@ void UART4_IRQHandler(void)
 void TIM7_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM7_IRQn 0 */
+  SEGGER_SYSVIEW_RecordEnterISR();
   ADCS_event_period_status = TIMED_EVENT_NOT_SERVICED;
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
-
+  SEGGER_SYSVIEW_RecordEnterISR();
   /* USER CODE END TIM7_IRQn 1 */
 }
 
