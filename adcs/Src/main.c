@@ -180,8 +180,7 @@ int main(void) {
                     adcs_time.set_time = true;
                 }
                 /* Calculate decimal year and Julian day */
-                decyear(&adcs_time);
-                julday(&adcs_time);
+                error_status = time_converter();
                 /* Check if the SGP4 is correct */
                 if (update_sgp4() == ERROR_OK) {
                     /* Update reference vectors */
@@ -211,12 +210,12 @@ int main(void) {
             }
             /* Update flag */
             ADCS_event_period_status = TIMED_EVENT_SERVICED;
+            /* Software error handler */
+            error_handler(error_status);
+            error_status = ERROR_OK;
         }
 
         error_status = update_obc_communication();
-        /* Software error handler */
-        error_handler(error_status);
-        error_status = ERROR_OK;
 
         /* USER CODE END WHILE */
 
