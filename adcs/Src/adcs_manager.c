@@ -101,9 +101,9 @@ adcs_error_status update_obc_communication() {
     uint32_t time_sys_tick = 0;
 
     time_sys_tick = HAL_sys_GetTick();
-//        uart_killer(OBC_APP_ID, &adcs_data.obc_uart, time_sys_tick);
+//    uart_killer(OBC_APP_ID, &adcs_data.obc_uart, time_sys_tick);
     pkt_pool_IDLE(time_sys_tick);
-//        queue_IDLE(OBC_APP_ID); // TODO
+    queue_IDLE(OBC_APP_ID);
     import_pkt(OBC_APP_ID, &adcs_data.obc_uart);
     export_pkt(OBC_APP_ID, &adcs_data.obc_uart);
 
@@ -172,10 +172,18 @@ adcs_error_status init_actuators() {
  * @return
  */
 adcs_error_status update_actuators() {
+    _adcs_spin_status spin_status_value;
+
     update_magneto_torquer(&adcs_actuator);
-    if (update_spin_torquer(&adcs_actuator) == MOTOR_ERROR) {
+    spin_status_value =  get_spin_state(&adcs_actuator);
+
+    if (spin_status_value == MOTOR_ERROR) {
         return ERROR_ACTUATOR;
+    } else if (spin_status_value == MOTOR_STALL) {
+        adcs_actuator.spin_torquer.RPM = 0;
     }
+    update_spin_torquer(&adcs_actuator);
+
     return error_propagation(ERROR_OK);
 }
 
@@ -189,6 +197,13 @@ void magneto_torquer_off() {
     /* Set OFF y side magneto-torquer */
     htim4.Instance->CCR3 = 0;
     htim4.Instance->CCR4 = 0;
+}
+
+/**
+ * Open magneto-torquers
+ */
+void magneto_torquer_on() {
+    update_magneto_torquer(&adcs_actuator);
 }
 
 /**
@@ -290,16 +305,6 @@ adcs_error_status update_measured_vectors() {
     if ((update_lsm9ds0_xm(&adcs_sensors) == DEVICE_ERROR)) {
         error_status_value = ERROR_SENSOR;
     }
-    /* Apply LPF to sensors values */
-    for (uint8_t sens_cnt = 0; sens_cnt < 3; sens_cnt++) {
-        adcs_sensors.imu.xm_f[sens_cnt] = A_XM * adcs_sensors.imu.xm[sens_cnt]
-                + (1 - A_XM) * adcs_sensors.imu.xm_prev[sens_cnt];
-        adcs_sensors.imu.gyr_f[sens_cnt] = A_GYRO
-                * adcs_sensors.imu.gyr[sens_cnt]
-                + (1 - A_GYRO) * adcs_sensors.imu.gyr_prev[sens_cnt];
-        adcs_sensors.mgn.rm_f[sens_cnt] = A_MGN * adcs_sensors.mgn.rm[sens_cnt]
-                + (1 - A_MGN) * adcs_sensors.mgn.rm_prev[sens_cnt];
-    }
 
     return error_propagation(error_status_value);
 
@@ -314,6 +319,8 @@ adcs_error_status init_attitude_determination() {
     /* Initialize Attitude determination */
     initWahbaStruct(&WahbaRot, LOOP_TIME);
 
+    WahbaRot.run_flag = false;
+
     return error_propagation(ERROR_OK);
 
 }
@@ -325,43 +332,122 @@ adcs_error_status init_attitude_determination() {
  * @return
  */
 adcs_error_status update_attitude_determination() {
+
+    adcs_error_status error_status_value = ERROR_OK;
+
     /* Set IGRF reference vectors */
 //    WahbaRot.w_m[0] = igrf_vector.Xm / igrf_vector.norm;
 //    WahbaRot.w_m[1] = igrf_vector.Ym / igrf_vector.norm;
 //    WahbaRot.w_m[2] = igrf_vector.Zm / igrf_vector.norm;
-    WahbaRot.w_m[0] = 0.5772;
-    WahbaRot.w_m[1] = 0.0437;
-    WahbaRot.w_m[2] = 0.8155;
+    WahbaRot.w_m[0] = 0.5235;
+    WahbaRot.w_m[1] = -0.0358;
+    WahbaRot.w_m[2] = 0.8512;
+//    adcs_sensors.mgn.rm_f[0] = 0.0885;
+//    adcs_sensors.mgn.rm_f[1] = 0.9917;
+//    adcs_sensors.mgn.rm_f[2] = -0.0929;
 
     /* Set Sun position reference vectors */
     WahbaRot.w_a[0] = sun_vector.sun_pos_ned.x / sun_vector.norm;
     WahbaRot.w_a[1] = sun_vector.sun_pos_ned.y / sun_vector.norm;
     WahbaRot.w_a[2] = sun_vector.sun_pos_ned.z / sun_vector.norm;
+//    WahbaRot.w_a[0] = -0.8557;
+//    WahbaRot.w_a[1] = 0.4078;
+//    WahbaRot.w_a[2] = -0.3187;
+//    adcs_sensors.sun.sun_xyz[0] = -0.7156;
+//    adcs_sensors.sun.sun_xyz[1] = -0.6528;
+//    adcs_sensors.sun.sun_xyz[2] = 0.2485;
+//    WahbaRot.sun_sensor_gain = 1;
 
     /* Check if the sun sensor is available */
     if (adcs_sensors.sun.sun_status == DEVICE_ENABLE) {
         WahbaRot.sun_sensor_gain = 1;
     } else if (adcs_sensors.sun.sun_status == DEVICE_DISABLE) {
         /* Propagate the sun sensor vector */
-        WahbaRot.sun_sensor_gain = 0.5;
-        mulMatrVec(adcs_sensors.sun.sun_xyz, WahbaRot.RotM_prev, WahbaRot.w_a);
+        WahbaRot.sun_sensor_gain = 0.1;
+        mulMatrVec(adcs_sensors.sun.sun_xyz, WahbaRot.RotM, WahbaRot.w_a);
+    } else {
+        /* Error in sun sensor */
+        adcs_sensors.sun.sun_xyz[0] = 0;
+        adcs_sensors.sun.sun_xyz[1] = 0;
+        adcs_sensors.sun.sun_xyz[2] = 0;
+        WahbaRot.sun_sensor_gain = 0;
     }
-
-    /* Check the magneto-meter sensor */
+    /* Check magneto-meter values according to norm of IGRF */
+    if (adcs_sensors.mgn.rm_norm > MAX_IGRF_NORM
+     || adcs_sensors.mgn.rm_norm < MIN_IGRF_NORM) {
+        adcs_sensors.mgn.rm_status = DEVICE_ERROR;
+        error_status_value = ERROR_SENSOR;
+    }
+    if (adcs_sensors.imu.xm_norm > MAX_IGRF_NORM
+     || adcs_sensors.imu.xm_norm < MIN_IGRF_NORM) {
+        adcs_sensors.mgn.rm_status = DEVICE_ERROR;
+        error_status_value = ERROR_SENSOR;
+    }
+    /* Check the magneto-meter sensor to run attitude algorithm */
     if ((adcs_sensors.mgn.rm_status == DEVICE_NORMAL
-            && adcs_sensors.imu.xm_status == DEVICE_NORMAL)
-            || (adcs_sensors.mgn.rm_status == DEVICE_NORMAL)) {
-
-        WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f,
-                adcs_sensors.mgn.rm_f, &WahbaRot);
-
+      && adcs_sensors.imu.xm_status == DEVICE_NORMAL)
+      || adcs_sensors.mgn.rm_status == DEVICE_NORMAL) {
+        WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f, adcs_sensors.mgn.rm_f, &WahbaRot);
+        WahbaRot.run_flag = true;
     } else if (adcs_sensors.imu.xm_status == DEVICE_NORMAL) {
-
-        WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f,
-                adcs_sensors.imu.xm_f, &WahbaRot);
-
+        WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f, adcs_sensors.imu.xm_f, &WahbaRot);
+        WahbaRot.run_flag = true;
     }
+    return error_propagation(error_status_value);
+}
+
+/**
+ * Run control for detumbling and pointing. Changes between controllers are done
+ * according to angular velocities and availability of sun sensor.
+ * @return Error status usual is ERROR_OK
+ */
+adcs_error_status attitude_control() {
+
+    float angular_velocities[3] = { 0 };
+
+    if (WahbaRot.run_flag == false) {
+        angular_velocities[0] = adcs_sensors.imu.gyr_f[0];
+        angular_velocities[1] = adcs_sensors.imu.gyr_f[1];
+        angular_velocities[2] = adcs_sensors.imu.gyr_f[2];
+    } else {
+        angular_velocities[0] = WahbaRot.W[0];
+        angular_velocities[1] = WahbaRot.W[1];
+        angular_velocities[2] = WahbaRot.W[2];
+    }
+    /* Run B-dot and spin torquer controller if the angular velocities are bigger than thresholds */
+    if (angular_velocities[0] > WX_THRES
+     || angular_velocities[1] > WY_THRES
+     || angular_velocities[2] > WZ_THRES) {
+        /* Check the magneto-meter sensor */
+        if ((adcs_sensors.mgn.rm_status == DEVICE_NORMAL
+          && adcs_sensors.imu.xm_status == DEVICE_NORMAL)
+          || adcs_sensors.mgn.rm_status == DEVICE_NORMAL) {
+            b_dot(adcs_sensors.mgn.rm_f, adcs_sensors.mgn.rm_prev, adcs_sensors.mgn.rm_norm, &control);
+        } else if (adcs_sensors.imu.xm_status == DEVICE_NORMAL) {
+            b_dot(adcs_sensors.imu.xm_f, adcs_sensors.imu.xm_prev, adcs_sensors.imu.xm_norm, &control);
+        } else {
+            control.Iz = 0;
+            control.Iy = 0;
+        }
+        spin_torquer_controller(angular_velocities[1], &control);
+    /* If angular velocities are smaller than the thresholds then run pointing controller */
+    } else {
+        /* Run pointing controller if the sun sensor is available */
+        if (adcs_sensors.sun.sun_status == DEVICE_ENABLE
+         && WahbaRot.run_flag == true) {
+            /* Run pointing controller when the sun sensor is available */
+            ;
+        }
+    }
+
+    /* Set the currents to magneto-torquers in mA*/
+    adcs_actuator.magneto_torquer.current_z = (int8_t) (control.Iz * 1000);
+    adcs_actuator.magneto_torquer.current_y = (int8_t) (control.Iy * 1000);
+    /* Set spin torquer RPM */
+    adcs_actuator.spin_torquer.RPM = control.const_rmp + control.sp_rpm;
+
     return error_propagation(ERROR_OK);
+
 }
 
 /**
@@ -375,12 +461,9 @@ adcs_error_status init_gps(struct time_utc gps_utc, _gps_state *gps_state_value)
 
     init_gps_uart();
     /* Set RTC alarm to open GPS because the time isn't set from OBC */
-    if (HAL_SetAlarm_GPS_ON(gps_utc) == GPS_ERROR_FLASH) {
-        gps_state_value->status = GPS_OFF;
-        error_status_value = ERROR_FLASH;
-    } else {
-        error_status_value = ERROR_OK;
-    }
+    HAL_SetAlarm_GPS(gps_utc.hour, GPS_ALARM_ON_INIT, gps_utc.sec);
+    gps_state_value->status = GPS_OFF;
+    error_status_value = ERROR_OK;
 
     return error_propagation(error_status_value);
 }
@@ -419,7 +502,7 @@ adcs_error_status update_gps_alarm_from_flash(struct time_utc gps_utc,
         gps_state_value->status = GPS_OFF;
     } else {
         /* Set the alarm according to the previous status */
-        gps_state_value->status = gps_flash[3];//gps_status_flash(gps_flash[3]);
+        gps_state_value->status = gps_flash[3];
         if (gps_state.status == GPS_UNLOCK || gps_state.status == GPS_RESET) {
             gps_state_value->status = HAL_SetAlarm_GPS_LOCK(gps_utc,
             GPS_ALARM_UNLOCK);
