@@ -43,6 +43,7 @@ void get_gps_sentences() {
             reset_gps_flag();
             gps_parse_fields(&gps_sentence, NMEA_MAX_LEN, gps_parser);
             gps_parse_logic(&gps_parser, &gps_state);
+            SYSVIEW_PRINT("%s", gps_sentence);
         }
     }
 }

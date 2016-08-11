@@ -13,6 +13,7 @@
 #define HALFPI  1.570796327
 #define DEG2RAD 0.017453293
 #define RAD2DEG 57.295779506
+#define RAD2RPM 60.0/(2*PI)
 
 #define GEO_NAN log(-1.0)
 
@@ -24,7 +25,7 @@
 #define LEAP_SECOND     17                                  // Leap seconds of 2016
 #define JD1900          2415020.5                           // Julian day number for Jan 1st, 00:00 hours 1900
 
-#define EQRAD   6378.137)                   // Earth radius at equator, km
+#define EQRAD   6378.137                   // Earth radius at equator, km
 #define LATCON  (1.0/298.257)               // Latitude radius constant
 #define ECON    ((1.0-LATCON)*(1.0-LATCON))
 

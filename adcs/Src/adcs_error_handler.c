@@ -67,7 +67,7 @@ void error_handler(adcs_error_status error) {
             trasmit_error_status = TR_ERROR_ACTUATOR;
         }
         /* Close the power of sensors */
-        for (uint8_t i = 0; i < 250; i++) {
+        for (uint8_t i = 0; i < 50; i++) {
             adcs_pwr_switch(SWITCH_ON, SENSORS);
             HAL_Delay(1);
             adcs_pwr_switch(SWITCH_OFF, SENSORS);
