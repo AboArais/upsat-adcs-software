@@ -43,12 +43,15 @@ static const float SUN_SENSOR_Q[6][6] = { { -1.38461, 5.03967e-2, -1.81857e-3,
         0, 0, 0, 0 } };
 #endif
 
-static const float RM_OFFSET[] = { 727.5142, -76.0090, 75.7189 };
-static const float RM_SCALE[] = { 0.2991e-3, 0.0139e-3, -0.0008e-3, 0,
-        0.3142e-3, -0.0026e-3, 0, 0, 0.3081e-3 };
-static const float XM_OFFSET[] = { 610.3734, -192.9480, 831.2022 };
-static const float XM_SCALE[] = { 0.1943e-3, -0.0059e-3, -0.0008e-3, 0,
-        0.1930e-3, -0.0052e-3, 0, 0, 0.1901e-3 };
+static const float RM_SCALE[] = { 0.942844, 0.0213722, -0.00124407,
+                                  0.0213722, 0.991231, -0.00425386,
+                                  -0.00124407, -0.00425386, 0.97131 };
+static const float RM_OFFSET[] = {727.514, -76.009, 75.7189};
+
+static const float XM_SCALE[]= {0.986041, -0.0150705, -0.00224594,
+                                -0.0150705, 0.980242, -0.0133326,
+                                -0.00224594, -0.0133326, 0.965527};
+static const float XM_OFFSET[] = {610.373, -192.948, 831.202};
 
 /* Initialize LSM9DS0 for gyroscope */
 _adcs_sensor_status init_lsm9ds0_gyro(_adcs_sensors *sensors) {
@@ -136,11 +139,11 @@ _adcs_sensor_status update_lsm9ds0_gyro(_adcs_sensors *sensors) {
         return DEVICE_ERROR;
     }
 
+    sensors->imu.gyr_status = DEVICE_NORMAL;
+
     sensors->imu.gyr_prev[0] = sensors->imu.gyr[0];
     sensors->imu.gyr_prev[1] = sensors->imu.gyr[1];
     sensors->imu.gyr_prev[2] = sensors->imu.gyr[2];
-
-    sensors->imu.gyr_status = DEVICE_NORMAL;
 
     sensors->imu.gyr[0] = RAD(-((float) sensors->imu.gyr_raw[2]
             - sensors->imu.calib_gyr[2]) * GYRO_GAIN); // -Zg
@@ -148,6 +151,11 @@ _adcs_sensor_status update_lsm9ds0_gyro(_adcs_sensors *sensors) {
             - sensors->imu.calib_gyr[1]) * GYRO_GAIN); // -Yg
     sensors->imu.gyr[2] = RAD(-((float) sensors->imu.gyr_raw[0]
             - sensors->imu.calib_gyr[0]) * GYRO_GAIN); // -Xb
+
+    for (uint8_t i = 0; i < 3; i++) {
+        sensors->imu.gyr_f[i] = A_GYRO * sensors->imu.gyr[i]
+                + (1 - A_GYRO) * sensors->imu.gyr_prev[i];
+    }
 
     return sensors->imu.gyr_status;
 }
@@ -217,24 +225,30 @@ _adcs_sensor_status update_lsm9ds0_xm(_adcs_sensors *sensors) {
         return DEVICE_ERROR;
     }
 
+    sensors->imu.xm_status = DEVICE_NORMAL;
+
     sensors->imu.xm_prev[0] = sensors->imu.xm[0];
     sensors->imu.xm_prev[1] = sensors->imu.xm[1];
     sensors->imu.xm_prev[2] = sensors->imu.xm[2];
 
-    sensors->imu.xm_status = DEVICE_NORMAL;
-    offset[0] = ((float) sensors->imu.xm_raw[0] - XM_OFFSET[0]);
-    offset[1] = ((float) sensors->imu.xm_raw[1] - XM_OFFSET[1]);
-    offset[2] = ((float) sensors->imu.xm_raw[2] - XM_OFFSET[2]);
+    offset[0] = ((float) (sensors->imu.xm_raw[0]) - XM_OFFSET[0]);
+    offset[1] = ((float) (sensors->imu.xm_raw[1]) - XM_OFFSET[1]);
+    offset[2] = ((float) (sensors->imu.xm_raw[2]) - XM_OFFSET[2]);
 
     sensors->imu.xm[0] = (offset[0] * XM_SCALE[6] + offset[1] * XM_SCALE[7]
-            + offset[2] * XM_SCALE[8]) * XM_GAIN; // Zxm
+            + offset[2] * XM_SCALE[8]) * XM_GAIN ; // Zxm
     sensors->imu.xm[1] = -(offset[0] * XM_SCALE[3] + offset[1] * XM_SCALE[4]
             + offset[2] * XM_SCALE[5]) * XM_GAIN; // -Yxm
     sensors->imu.xm[2] = -(offset[0] * XM_SCALE[0] + offset[1] * XM_SCALE[1]
-            + offset[2] * XM_SCALE[2]) * XM_GAIN; // -Xxm
+            + offset[2] * XM_SCALE[2])* XM_GAIN; // -Xxm
 
-    sensors->imu.xm_norm = (float) norm(sensors->imu.xm[0], sensors->imu.xm[1],
-            sensors->imu.xm[2]);
+    for (uint8_t i = 0; i < 3; i++) {
+        sensors->imu.xm_f[i] = A_XM * sensors->imu.xm[i]
+                + (1 - A_XM) * sensors->imu.xm_prev[i];
+    }
+
+    sensors->imu.xm_norm = (float) norm(sensors->imu.xm_f[0],
+            sensors->imu.xm_f[1], sensors->imu.xm_f[2]);
 
     return sensors->imu.xm_status;
 }
@@ -323,7 +337,6 @@ _adcs_sensor_status update_rm3100(_adcs_sensors *sensors) {
     }
     HAL_GPIO_WritePin(RM_CS_GPIO_Port, RM_CS_Pin, GPIO_PIN_SET);
 
-    sensors->mgn.rm_status = DEVICE_NORMAL;
     /* X Axis */
     ptr = (char*) (&tmp);
     ptr = ptr + 3;
@@ -359,13 +372,15 @@ _adcs_sensor_status update_rm3100(_adcs_sensors *sensors) {
         return DEVICE_ERROR;
     }
 
+    sensors->mgn.rm_status = DEVICE_NORMAL;
+
     sensors->mgn.rm_prev[0] = sensors->mgn.rm[0];
     sensors->mgn.rm_prev[1] = sensors->mgn.rm[1];
     sensors->mgn.rm_prev[2] = sensors->mgn.rm[2];
 
-    offset[0] = ((float) sensors->mgn.rm_raw[0] - RM_OFFSET[0]);
-    offset[1] = ((float) sensors->mgn.rm_raw[1] - RM_OFFSET[1]);
-    offset[2] = ((float) sensors->mgn.rm_raw[2] - RM_OFFSET[2]);
+    offset[0] = ((float) (sensors->mgn.rm_raw[0]) - RM_OFFSET[0]);
+    offset[1] = ((float) (sensors->mgn.rm_raw[1]) - RM_OFFSET[1]);
+    offset[2] = ((float) (sensors->mgn.rm_raw[2]) - RM_OFFSET[2]);
 
     sensors->mgn.rm[0] = (offset[0] * RM_SCALE[6] + offset[1] * RM_SCALE[7]
             + offset[2] * RM_SCALE[8]) * PNI_GAIN; // Zm
@@ -374,8 +389,13 @@ _adcs_sensor_status update_rm3100(_adcs_sensors *sensors) {
     sensors->mgn.rm[2] = (offset[0] * RM_SCALE[3] + offset[1] * RM_SCALE[4]
             + offset[2] * RM_SCALE[5]) * PNI_GAIN; // Ym
 
-    sensors->mgn.rm_norm = (float) norm(sensors->mgn.rm[0], sensors->mgn.rm[1],
-            sensors->mgn.rm[2]);
+    for (uint8_t i = 0; i < 3; i++) {
+        sensors->mgn.rm_f[i] = A_MGN * sensors->mgn.rm[i]
+                + (1 - A_MGN) * sensors->mgn.rm_prev[i];
+    }
+
+    sensors->mgn.rm_norm = (float) norm(sensors->mgn.rm_f[0], sensors->mgn.rm_f[1],
+            sensors->mgn.rm_f[2]);
 
     return sensors->mgn.rm_status;
 
@@ -538,7 +558,6 @@ _adcs_sensor_status update_sun_sensor(_adcs_sensors *sensors) {
         return DEVICE_ERROR;
     }
 
-    sensors->sun.sun_status = DEVICE_NORMAL;
     /* Convert to V */
     for (i = 0; i < 5; i++) {
         sensors->sun.v_sun[i] = (float) sensors->sun.v_sun_raw[i] * AD7682_COEF;
@@ -580,11 +599,12 @@ _adcs_sensor_status update_sun_sensor(_adcs_sensors *sensors) {
 
         /* Calculate Rough Measure */
         if ((long_rough_demominator_sum != 0)
-                && (lat_rough_demominator_sum != 0)) {
+         && (lat_rough_demominator_sum != 0)) {
             sensors->sun.sun_rough[0] = atan2f(long_rough_numerator_sum, long_rough_demominator_sum);
             sensors->sun.sun_rough[1] = acosf(lat_rough_numerator_sum / sqrtf(lat_rough_demominator_sum));
             sensors->sun.sun_rough[2] = 1;
         } else {
+            /* Invalid values */
             sensors->sun.sun_status = DEVICE_ERROR;
             return DEVICE_ERROR;
         }

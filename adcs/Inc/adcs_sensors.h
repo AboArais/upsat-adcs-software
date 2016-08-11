@@ -21,17 +21,16 @@
 #define WHO_AM_I_XM     0x0F
 #define XM_ID           0x49
 #define XM_VAL          0x08
-#define XM_GAIN         8           // nT
-#define XM_THRESHOLD    10000       // Threshold to check the values of magneto meter
+#define XM_GAIN         8           // nT/LSB
 
-#define LSM9DS0_TIMEOUT 500
+#define LSM9DS0_TIMEOUT 500         // in ms
 #define LSM9DS0_MASK    0x80
 /* Gyroscope offsets */
 #define AUTO_GYRO_CALIB 0
 #define GYRO_N          100         // Calculate gyroscope offset
-#define GYRO_OFFSET_X   -54.68
-#define GYRO_OFFSET_Y   42.2
-#define GYRO_OFFSET_Z   -120.83
+#define GYRO_OFFSET_X   -200
+#define GYRO_OFFSET_Y   -80
+#define GYRO_OFFSET_Z   -380
 
 /* RM3100 Magnetometer, SPI1 */
 #define PNI_POLL        0x00    // Polls for a Single Measurement
@@ -60,11 +59,9 @@
 #define STATUS_MASK     0x80    // To get status of data ready
 #define PNI_CyclesMSB   0x00
 #define PNI_CyclesLSB   0xC8
-#define PNI_GAIN        1e3/75.0  // Convert to nT 1e3/75
+#define PNI_GAIN        1e3/75.0  // nT/LSB
 #define PNI_DEFAULT_ID  0x22
-#define PNI_TIMEOUT     500
-#define PNI_THRESHOLD   10000     // Threshold to check the values of magneto meter
-
+#define PNI_TIMEOUT     500       // in ms
 
 /* ADT7420 temperature sensor */
 #define ADT7420_ADDRESS             0x48    // ADT7420 address, IC2
@@ -82,7 +79,7 @@
 #define ADT7420_REG_HIST            0x0A    // Temperature HYST set point
 #define ADT7420_REG_ID              0x0B    // ID
 #define ADT7420_REG_RESET           0x2F    // Software reset
-#define ADT7420_TIMEOUT             500
+#define ADT7420_TIMEOUT             500     // in ms
 /* ADT7420 configure */
 #define ADT7420_16BIT               0x80
 #define ADT7420_OP_MODE_1_SPS       0x40
@@ -101,7 +98,7 @@
 #define AD7682_CH2      0x04        // Channel 2
 #define AD7682_CH1      0x02        // Channel 1
 #define AD7682_COEF     0.0000625   // Convert digital measure to analog
-#define AD7682_TIMEOUT	100
+#define AD7682_TIMEOUT	100         // in ms
 
 /* Sun Sensor Coefficient */
 #define SUN_SENSOR_VALID    0.7 // Threshold for valid values
@@ -109,12 +106,15 @@
 #define SUN_FINE            0   // 1 for fine measurements
 
 /* LP Filter */
-#define A_GYRO 0.7  // Coefficient < 1.0
-#define A_MGN 0.7   // Coefficient < 1.0
-#define A_XM 0.7    // Coefficient < 1.0
+#define A_GYRO 0.7    // Coefficient < 1.0
+#define A_MGN  0.7    // Coefficient < 1.0
+#define A_XM   0.7    // Coefficient < 1.0
 
 typedef enum {
-    DEVICE_ERROR = 0, DEVICE_NORMAL, DEVICE_ENABLE, DEVICE_DISABLE
+    DEVICE_ERROR = 0,
+    DEVICE_NORMAL,
+    DEVICE_ENABLE,
+    DEVICE_DISABLE
 } _adcs_sensor_status;
 
 typedef struct {
