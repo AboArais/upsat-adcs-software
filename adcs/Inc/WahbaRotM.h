@@ -71,6 +71,7 @@ typedef struct {
     float Euler[3];
     float AccErr;
     float dt;
+    uint8_t run_flag;
 } WahbaRotMStruct;
 
 extern WahbaRotMStruct WahbaRot;
@@ -159,27 +160,19 @@ static inline void mulMatrTrVec(real *v, real (*A)[3], real *x) {
 
 //Rot2Euler
 static inline void rotmtx2euler(const float *rotmtx, float *euler) {
-    /*0 1 2  0 3 6
-     3 4 5  1 4 7
-     6 7 8  2 5 8
-     */
 
-    // Rbe --> euler
-    const float tol = 0.99999f;
-    const float test = -rotmtx[2];
-    if (test > +tol) {
-        euler[0] = atan2f(-rotmtx[7], rotmtx[4]);
-        euler[1] = +0.5f * PI;
-        euler[2] = 0.0f;
-    } else if (test < -tol) {
-        euler[0] = atan2f(-rotmtx[7], rotmtx[4]);
-        euler[1] = -0.5f * PI;
-        euler[2] = 0.0f;
-    } else {
-        euler[0] = atan2f(rotmtx[5], rotmtx[8]);
-        euler[1] = asinf(-rotmtx[2]); //3-4us!!
-        euler[2] = atan2f(rotmtx[1], rotmtx[0]);
-    }
+    const float tol = 1E-6;
+    const float test = sqrt(rotmtx[0] * rotmtx[0] + rotmtx[3] * rotmtx[3]);
+
+        if (test >= +tol) {
+            euler[0] = atan2(rotmtx[3], rotmtx[0]);
+            euler[1] = atan2(-rotmtx[6], test);
+            euler[2] = atan2f(rotmtx[7], rotmtx[8]);
+        } else {
+            euler[0] = 0;
+            euler[1] = atan2f(-rotmtx[6], test);
+            euler[2] = atan2f(-rotmtx[5], rotmtx[4]);
+        }
 }
 
 /**
