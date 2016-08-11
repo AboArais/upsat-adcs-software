@@ -112,6 +112,9 @@ int main(void) {
     /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
 
+    /* Wait for EPS ready */
+    HAL_Delay(EPS_DELAY_READY);
+
     /* Configure the system clock */
     SystemClock_Config();
 
@@ -158,17 +161,53 @@ int main(void) {
     HAL_IWDG_Refresh(&hiwdg);
     /* USER CODE END 2 */
 
+    /**************************************/
+//    adcs_time.utc.year = 16;
+//    adcs_time.utc.month = 8;
+//    adcs_time.utc.day = 8;
+//    adcs_time.utc.weekday = RTC_WEEKDAY_MONDAY;
+//    adcs_time.utc.hour = 20;
+//    adcs_time.utc.min = 30;
+//    adcs_time.utc.sec = 0;
+//    set_time_UTC(adcs_time.utc);
+//
+//    int16_t XM[3000];
+//    int32_t RM[3000];
+//    uint16_t j = 0;
+    /**************************************/
+
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
         /* GPS update */
         error_status = update_gps(&gps_state);
 
-        /* Control loop runs at 168ms, interrupt runs every ~1.048s, WDG at ~2s */
+        /* Control loop runs at 68ms, interrupt runs every ~1.2s, WDG at ~2.4s */
         if (ADCS_event_period_status == TIMED_EVENT_NOT_SERVICED) {
-
             /* Send to EPS a packet */
             update_eps_pkt();
+            /* Close Magneto-torquer for ms */
+            magneto_torquer_off();
+            /* Update measured vectors */
+            error_status = update_measured_vectors();
+            /**************************************/
+//                    if (j<3000) {
+//                        RM[j] = adcs_sensors.mgn.rm_raw[0];
+//                        XM[j] = adcs_sensors.imu.xm_raw[0];
+//                        j++;
+//                        RM[j] = adcs_sensors.mgn.rm_raw[1];
+//                        XM[j] = adcs_sensors.imu.xm_raw[1];
+//                        j++;
+//                        RM[j] = adcs_sensors.mgn.rm_raw[2];
+//                        XM[j] = adcs_sensors.imu.xm_raw[2];
+//                        j++;
+//
+//                    } else {
+//                        break;
+//                    }
+            /**************************************/
+            /* Open Magneto-torquer with previous current values */
+            magneto_torquer_on();
             /* Get time for RTC*/
             get_time_UTC(&adcs_time.utc);
             /* Check if time is correct */
@@ -185,15 +224,8 @@ int main(void) {
                 if (update_sgp4() == ERROR_OK) {
                     /* Update reference vectors */
                     error_status = update_reference_vectors();
-                    /* Close Magneto-torquer for 56ms */
-                    magneto_torquer_off();
-                    /* Update measured vectors */
-                    error_status = update_measured_vectors();
                     /* Calculate Euler angles and angular velocities */
                     error_status = update_attitude_determination();
-                    /* Control Law */
-                    error_status = update_actuators();
-                    adcs_sysview_print();
                 } else {
                     error_status = ERROR_SGP4;
                 }
@@ -202,15 +234,19 @@ int main(void) {
                 error_status = ERROR_TIME;
                 adcs_time.set_time = false;
                 uint32_t obc_request_get_tick = HAL_sys_GetTick();
-                if (obc_request_get_tick
-                        - obc_request_time> OBC_REQUEST_TIME_UPDATE) {
+                if (obc_request_get_tick - obc_request_time> OBC_REQUEST_TIME_UPDATE) {
                     time_management_request_time_in_utc(OBC_APP_ID);
                     obc_request_time = obc_request_get_tick;
                 }
             }
+            /* Calculate control signals */
+            error_status = attitude_control();
+            /* Set actuators according to control signals */
+            error_status = update_actuators();
             /* Update flag */
             ADCS_event_period_status = TIMED_EVENT_SERVICED;
-            /* Software error handler */
+            /* Software error handler runs for actuator and sensor 230ms*/
+            adcs_sysview_print();
             error_handler(error_status);
             error_status = ERROR_OK;
         }
@@ -246,7 +282,7 @@ void SystemClock_Config(void) {
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM = 6;
-    RCC_OscInitStruct.PLL.PLLN = 80;
+    RCC_OscInitStruct.PLL.PLLN = 168;
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
     RCC_OscInitStruct.PLL.PLLQ = 7;
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
@@ -257,9 +293,9 @@ void SystemClock_Config(void) {
             | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
     RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK) {
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
         Error_Handler();
     }
 
@@ -298,7 +334,7 @@ static void MX_I2C2_Init(void) {
     hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
     hi2c2.Init.OwnAddress2 = 0;
     hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_ENABLE;
     if (HAL_I2C_Init(&hi2c2) != HAL_OK) {
         Error_Handler();
     }
@@ -384,7 +420,7 @@ static void MX_SPI1_Init(void) {
     hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
     hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
     hspi1.Init.NSS = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+    hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
     hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
     hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
     hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -643,18 +679,26 @@ void adcs_sysview_print() {
     SYSVIEW_PRINT("W %.2f %.2f %.2f", DEG(WahbaRot.W[0]), DEG(WahbaRot.W[1]),
             DEG(WahbaRot.W[2]));
     SYSVIEW_PRINT("TEMPERATURE %.2f", adcs_sensors.temp.temp_c);
-    SYSVIEW_PRINT("RM %.2f %.2f %.2f", adcs_sensors.mgn.rm_f[0],
-            adcs_sensors.mgn.rm_f[1], adcs_sensors.mgn.rm_f[2]);
-    SYSVIEW_PRINT("XM %.2f %.2f %.2f", adcs_sensors.imu.xm_f[0],
-            adcs_sensors.imu.xm_f[1], adcs_sensors.imu.xm_f[2]);
-    SYSVIEW_PRINT("GYRO %.2f %.2f %.2f", adcs_sensors.imu.gyr_f[0],
-            adcs_sensors.imu.gyr_f[1], adcs_sensors.imu.gyr_f[2]);
+    SYSVIEW_PRINT("IGRF %.2f %.2f %.2f %.2f", igrf_vector.Xm,
+            igrf_vector.Ym, igrf_vector.Zm, igrf_vector.norm);
+    SYSVIEW_PRINT("RM %.2f %.2f %.2f %.2f", adcs_sensors.mgn.rm_f[0],
+            adcs_sensors.mgn.rm_f[1], adcs_sensors.mgn.rm_f[2], adcs_sensors.mgn.rm_norm);
+    SYSVIEW_PRINT("XM %.2f %.2f %.2f %.2f", adcs_sensors.imu.xm_f[0],
+            adcs_sensors.imu.xm_f[1], adcs_sensors.imu.xm_f[2], adcs_sensors.imu.xm_norm);
+    SYSVIEW_PRINT("GYRO %.2f %.2f %.2f", DEG(adcs_sensors.imu.gyr_f[0]),
+            DEG(adcs_sensors.imu.gyr_f[1]), DEG(adcs_sensors.imu.gyr_f[2]));
+    SYSVIEW_PRINT("GYRO %d %d %d", adcs_sensors.imu.gyr_raw[0],
+            adcs_sensors.imu.gyr_raw[1], adcs_sensors.imu.gyr_raw[2]);
     SYSVIEW_PRINT("V %.2f %.2f %.2f %.2f %.2f", adcs_sensors.sun.v_sun[0],
             adcs_sensors.sun.v_sun[1], adcs_sensors.sun.v_sun[2],
             adcs_sensors.sun.v_sun[3], adcs_sensors.sun.v_sun[4]);
     SYSVIEW_PRINT("SPIN RPM %ld", adcs_actuator.spin_torquer.m_RPM);
     SYSVIEW_PRINT("SPIN STATUS %d", adcs_actuator.spin_torquer.status);
     SYSVIEW_PRINT("ECI %.2f %.2f %.2f", p_eci.x, p_eci.y, p_eci.z);
+    SYSVIEW_PRINT("CURRENTS %d %d", adcs_actuator.magneto_torquer.current_y,
+            adcs_actuator.magneto_torquer.current_z);
+    SYSVIEW_PRINT("SPIN RPM %ld", adcs_actuator.spin_torquer.RPM);
+    SYSVIEW_PRINT("SP SPIN %.2f", control.sp_rpm);
 }
 
 /* USER CODE END 4 */
