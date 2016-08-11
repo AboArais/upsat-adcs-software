@@ -11,7 +11,7 @@
 /* Spin Torquer */
 #define SPIN_ID         0x03
 #define SPIN_TIMEOUT    10000
-#define MAX_RPM         20000
+#define MAX_RPM         15000
 #define CNT2RPM(x)      48000000*15/(x)
 #define RPM2CNT(x)      CNT2RPM(x)
 /* MOTOR In sync to bridge pulses, but not locked  yet to reference RPM (MOTOR_INSYNC)
@@ -19,7 +19,11 @@
  * MOTOR stalled (that is bad, unless RPMr <100, MOTOR_STALL)
  */
 typedef enum {
-    MOTOR_ERROR = 0, MOTOR_INSYNC, MOTOR_LOCKED, MOTOR_STALL, MOTOR_STOP
+    MOTOR_ERROR = 0,
+    MOTOR_INSYNC,
+    MOTOR_LOCKED,
+    MOTOR_STALL,
+    MOTOR_STOP
 } _adcs_spin_status;
 
 typedef struct {
@@ -32,9 +36,9 @@ typedef struct {
 
 /* Set Up PWM Start up Duty-Cycle */
 #define MAGNETO_TORQUER_PERIOD      65535   // 1.282 KHz
-#define MAGNETO_TORQUER_RESISTANCE  135     // in Ohm
+#define MAGNETO_TORQUER_RESISTANCE  60      // in Ohm two R in parallel 120Ohm
 #define MAX_VOLT_MAGNETO_TORQUER    5000    // in mV
-#define MAX_CURR_MAGNETO_TORQUER    37      // in mA
+#define MAX_CURR_MAGNETO_TORQUER    85      // in mA
 
 typedef struct {
     int8_t current_z;
