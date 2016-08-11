@@ -28,9 +28,9 @@
 /* Gyroscope offsets */
 #define AUTO_GYRO_CALIB 0
 #define GYRO_N          100         // Calculate gyroscope offset
-#define GYRO_OFFSET_X   -200
-#define GYRO_OFFSET_Y   -80
-#define GYRO_OFFSET_Z   -380
+#define GYRO_OFFSET_X   72.38
+#define GYRO_OFFSET_Y   381.63
+#define GYRO_OFFSET_Z   409.60
 
 /* RM3100 Magnetometer, SPI1 */
 #define PNI_POLL        0x00    // Polls for a Single Measurement
