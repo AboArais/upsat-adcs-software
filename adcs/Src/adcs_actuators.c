@@ -163,6 +163,11 @@ _adcs_spin_status get_spin_state(_adcs_actuator *actuator) {
     actuator->spin_torquer.m_RPM |= getbuf[6] << 0;
     actuator->spin_torquer.m_RPM = CNT2RPM(actuator->spin_torquer.m_RPM);
 
+    /* Correct sign of measure */
+    if (actuator->spin_torquer.RPM < 0) {
+        actuator->spin_torquer.m_RPM = - actuator->spin_torquer.m_RPM;
+    }
+
     switch (getbuf[2]) {
     case 1:
         actuator->spin_torquer.status = MOTOR_INSYNC;
