@@ -8,6 +8,8 @@
 #ifndef ADCS_CONTROL_H_
 #define ADCS_CONTROL_H_
 
+#include "WahbaRotM.h"
+
 #define A_COIL                1.55     // in m^2 = nA, n: number of turns, A: area of one turn
 #define BDOT_FILTER           0.5      // is 0 < BDOT_FILTER < 1
 #define I_SPIN_TORQUER        2.12E-07 // Fly wheel moment of inertia kg*m^2
@@ -37,5 +39,7 @@ extern _adcs_control control;
 
 void b_dot(float b[3], float b_prev[3], float b_norm, _adcs_control *control_struct);
 void spin_torquer_controller(float w, _adcs_control *control_struct);
+void pointing_controller(float b[3], float b_norm, WahbaRotMStruct *WStruct,
+        _adcs_control *control_struct);
 
 #endif /* ADCS_CONTROL_H_ */
