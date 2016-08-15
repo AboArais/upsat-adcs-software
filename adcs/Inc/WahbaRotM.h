@@ -158,7 +158,35 @@ static inline void mulMatrTrVec(real *v, real (*A)[3], real *x) {
     v[2] = A[0][2] * x[0] + A[1][2] * x[1] + A[2][2] * x[2];
 }
 
-//Rot2Euler
+/**
+ * Calculate rotation matrix from euler angles, rotation order XYZ
+ * @param rotm
+ * @param euler
+ */
+static inline void euler2rotm(float *rotm, const float *euler) {
+
+    rotm[0] = cosv(euler[1]) * cosv(euler[2]);
+    rotm[1] = -cosv(euler[1]) * sinv(euler[2]);
+    rotm[2] = sinv(euler[1]);
+
+    rotm[3] = cosv(euler[0]) * sinv(euler[2])
+            + cosv(euler[2]) * sinv(euler[0]) * sinv(euler[1]);
+    rotm[4] = cosv(euler[0]) * cosv(euler[2])
+            - sinv(euler[0]) * sinv(euler[1]) * sinv(euler[2]);
+    rotm[5] = -cosv(euler[1]) * sinv(euler[0]);
+
+    rotm[6] = sinv(euler[0]) * sinv(euler[2])
+            - cosv(euler[0]) * cosv(euler[2]) * sinv(euler[1]);
+    rotm[7] = cosv(euler[2]) * sinv(euler[0])
+            + cosv(euler[0]) * sinv(euler[1]) * sinv(euler[2]);
+    rotm[8] = cosv(euler[0]) * cosv(euler[1]);
+}
+
+/**
+ * Calculate euler angles from rotation matrix, rotation order XYZ
+ * @param rotmtx
+ * @param euler
+ */
 static inline void rotmtx2euler(const float *rotmtx, float *euler) {
 
     const float tol = 1E-6;
@@ -267,7 +295,11 @@ static inline void dRpropagatInfinite(real (*Rbe)[3], real (*R)[3], real *wb, re
     }
 }
 
-//Rot2quat
+/**
+ * Calculate quaternions from rotation matrix, [x y z w].
+ * @param rotmtx
+ * @param q
+ */
 static inline void rotmtx2quat(const float *rotmtx, Quat4 *q) {
     q->z = 0.0f;
     float sqtrp1;
