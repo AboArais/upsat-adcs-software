@@ -35,11 +35,11 @@
 #define MAX_IGRF_NORM   80000 // in nT, to check if the magneto-meter values are valid
 #define MIN_IGRF_NORM   10000 // in nT, to check if the magneto-meter values are valid
 
-#define WX_THRES        RAD(0.2) // Threshold to enable B-dot controller (in deg/s)
-#define WY_THRES        RAD(0.2) // Threshold to enable B-dot controller (in deg/s)
-#define WZ_THRES        RAD(0.2) // Threshold to enable B-dot controller (in deg/s)
+#define WX_THRES        RAD(0.3) // Threshold to enable B-dot controller (in deg/s)
+#define WY_THRES        RAD(0.3) // Threshold to enable B-dot controller (in deg/s)
+#define WZ_THRES        RAD(0.3) // Threshold to enable B-dot controller (in deg/s)
 
-#define BDOT_GAIN            1      // Gain of B-dot controller, *0.1Nms
+#define BDOT_GAIN            10     // Gain of B-dot controller, *0.1Nms
 #define POINTING_GAIN_W      1      // Point gain kp1
 #define POINTING_GAIN_Q      20     // Point gain kp2
 #define SPIN_TORQUER_GAIN    1      // Spin torquer gain, *0.001Nms
