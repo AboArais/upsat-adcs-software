@@ -105,11 +105,11 @@ void pointing_controller(float b[3], float b_norm, WahbaRotMStruct *WStruct,
     SYSVIEW_PRINT("CONTROL %.2f %.2f %.2f", m_w[0], m_w[1], m_w[2]);
 
     /* Calculate control signal from pitch set point */
-    m_q[0] = -(float) control_struct->k_pointing[0] * 0.01
+    m_q[0] = -(float) control_struct->k_pointing[1] * 0.01
             * (b[1] * sp_quat.z - b[2] * sp_quat.y);
-    m_q[1] = -(float) control_struct->k_pointing[0] * 0.01
+    m_q[1] = -(float) control_struct->k_pointing[1] * 0.01
             * (b[0] * sp_quat.z - b[2] * sp_quat.x);
-    m_q[2] = -(float) control_struct->k_pointing[0] * 0.01
+    m_q[2] = -(float) control_struct->k_pointing[1] * 0.01
             * (b[0] * sp_quat.y - b[1] * sp_quat.x);
     SYSVIEW_PRINT("CONTROL %.2f %.2f %.2f", m_q[0], m_q[1], m_q[2]);
 
