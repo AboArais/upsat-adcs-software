@@ -17,7 +17,7 @@ _adcs_control control = { .b_dot[0] = 0, .b_dot[1] = 0, .b_dot[2] = 0,
                           .b_dot_prev[2] = 0,.k_bdot = BDOT_GAIN,
                           .k_pointing[0] = POINTING_GAIN_W,
                           .k_pointing[1] = POINTING_GAIN_Q,
-                          .sp_yaw = 0, .sp_pitch = 30, .sp_roll = 0,
+                          .sp_yaw = 0, .sp_pitch = 0, .sp_roll = 0,
                           .Ix = 0, .Iy = 0, .Iz = 0 ,
                           .k_spin = SPIN_TORQUER_GAIN,
                           .sp_rpm = 0, .const_rmp = SPIN_TORQUER_REF_RPM };
