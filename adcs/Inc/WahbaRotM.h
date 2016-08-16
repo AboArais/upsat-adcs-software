@@ -159,31 +159,32 @@ static inline void mulMatrTrVec(real *v, real (*A)[3], real *x) {
 }
 
 /**
- * Calculate rotation matrix from euler angles, rotation order XYZ
+ * Calculate rotation matrix from euler angles, rotation order ZYX
  * @param rotm
  * @param euler
  */
 static inline void euler2rotm(float *rotm, const float *euler) {
 
-    rotm[0] = cosv(euler[1]) * cosv(euler[2]);
-    rotm[1] = -cosv(euler[1]) * sinv(euler[2]);
-    rotm[2] = sinv(euler[1]);
+    rotm[0] = cosv(euler[0]) * cosv(euler[1]);
+    rotm[1] = cosv(euler[0]) * sinv(euler[1]) * sinv(euler[2]) - cosv(euler[2])
+            * sinv(euler[0]);
+    rotm[2] = sinv(euler[0]) * sinv(euler[2]) + cosv(euler[0]) * cosv(euler[2])
+            * sinv(euler[1]);
 
-    rotm[3] = cosv(euler[0]) * sinv(euler[2])
-            + cosv(euler[2]) * sinv(euler[0]) * sinv(euler[1]);
-    rotm[4] = cosv(euler[0]) * cosv(euler[2])
-            - sinv(euler[0]) * sinv(euler[1]) * sinv(euler[2]);
-    rotm[5] = -cosv(euler[1]) * sinv(euler[0]);
+    rotm[3] = cosv(euler[1]) * sinv(euler[0]);
+    rotm[4] = cosv(euler[0]) * cosv(euler[2]) + sinv(euler[0]) * sinv(euler[1])
+            * sinv(euler[2]);
+    rotm[5] = cosv(euler[2]) * sinv(euler[0]) * sinv(euler[1]) - cosv(euler[0])
+            * sinv(euler[2]);
 
-    rotm[6] = sinv(euler[0]) * sinv(euler[2])
-            - cosv(euler[0]) * cosv(euler[2]) * sinv(euler[1]);
-    rotm[7] = cosv(euler[2]) * sinv(euler[0])
-            + cosv(euler[0]) * sinv(euler[1]) * sinv(euler[2]);
-    rotm[8] = cosv(euler[0]) * cosv(euler[1]);
+    rotm[6] = - sinv(euler[1]);
+    rotm[7] = cosv(euler[1]) * sinv(euler[2]);
+    rotm[8] = cosv(euler[1]) * cosv(euler[2]);
+
 }
 
 /**
- * Calculate euler angles from rotation matrix, rotation order XYZ
+ * Calculate euler angles from rotation matrix, rotation order ZYX
  * @param rotmtx
  * @param euler
  */
