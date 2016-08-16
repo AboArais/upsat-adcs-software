@@ -43,15 +43,17 @@ static const float SUN_SENSOR_Q[6][6] = { { -1.38461, 5.03967e-2, -1.81857e-3,
         0, 0, 0, 0 } };
 #endif
 
-static const float RM_SCALE[] = { 0.942844, 0.0213722, -0.00124407,
-                                  0.0213722, 0.991231, -0.00425386,
-                                  -0.00124407, -0.00425386, 0.97131 };
-static const float RM_OFFSET[] = {727.514, -76.009, 75.7189};
+static const float RM_SCALE[] = {0.942819, -0.00812913, -0.0318104,
+                                 -0.00812913, 0.997097, -0.0161291,
+                                 -0.0318104, -0.0161291, 0.905183};
+static const float RM_OFFSET[] = {-502.27, 499.987, -452.509};
 
-static const float XM_SCALE[]= {0.986041, -0.0150705, -0.00224594,
-                                -0.0150705, 0.980242, -0.0133326,
-                                -0.00224594, -0.0133326, 0.965527};
-static const float XM_OFFSET[] = {610.373, -192.948, 831.202};
+static const float XM_SCALE[]= {0.932797, -0.0297068, -0.0197907,
+                                -0.0297068, 0.986354, -0.0150793,
+                                -0.0197907, -0.0150793, 0.916263};
+static const float XM_OFFSET[] = {-1165.66, 194.66, 629.292};
+
+
 
 /* Initialize LSM9DS0 for gyroscope */
 _adcs_sensor_status init_lsm9ds0_gyro(_adcs_sensors *sensors) {
