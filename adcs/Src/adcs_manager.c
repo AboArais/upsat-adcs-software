@@ -129,7 +129,7 @@ adcs_error_status init_tle() {
     if (update_tle(&upsat_tle, temp_tle) == TLE_ERROR) {
         error_status_value = ERROR_TLE;
         sprintf(tle_string,
-                "1 25544U 98067A   16162.92532131  .00002383  00000-0  42612-4 0  9997\n2 25544  51.6444  89.2671 0000253 327.6000 149.2249 15.54516511  4017");
+                "1 25544U 98067A   16229.19636472  .00005500  00000-0  87400-4 0  9991\n2 25544  51.6439 118.5889 0001926 134.0246   3.7037 15.55029964 14324");
         temp_tle = read_tle(tle_string);
         update_tle(&upsat_tle, temp_tle);
     }
@@ -333,30 +333,19 @@ adcs_error_status init_attitude_determination() {
  */
 adcs_error_status update_attitude_determination() {
 
+    float gyroscope[3] = { 0 };
+
     adcs_error_status error_status_value = ERROR_OK;
 
     /* Set IGRF reference vectors */
     WahbaRot.w_m[0] = igrf_vector.Xm / igrf_vector.norm;
     WahbaRot.w_m[1] = igrf_vector.Ym / igrf_vector.norm;
     WahbaRot.w_m[2] = igrf_vector.Zm / igrf_vector.norm;
-//    WahbaRot.w_m[0] = 0.5235;
-//    WahbaRot.w_m[1] = -0.0358;
-//    WahbaRot.w_m[2] = 0.8512;
-//    adcs_sensors.mgn.rm_f[0] = 0.0885;
-//    adcs_sensors.mgn.rm_f[1] = 0.9917;
-//    adcs_sensors.mgn.rm_f[2] = -0.0929;
 
     /* Set Sun position reference vectors */
     WahbaRot.w_a[0] = sun_vector.sun_pos_ned.x / sun_vector.norm;
     WahbaRot.w_a[1] = sun_vector.sun_pos_ned.y / sun_vector.norm;
     WahbaRot.w_a[2] = sun_vector.sun_pos_ned.z / sun_vector.norm;
-//    WahbaRot.w_a[0] = -0.8557;
-//    WahbaRot.w_a[1] = 0.4078;
-//    WahbaRot.w_a[2] = -0.3187;
-//    adcs_sensors.sun.sun_xyz[0] = -0.7156;
-//    adcs_sensors.sun.sun_xyz[1] = -0.6528;
-//    adcs_sensors.sun.sun_xyz[2] = 0.2485;
-//    WahbaRot.sun_sensor_gain = 1;
 
     /* Check if the sun sensor is available */
     if (adcs_sensors.sun.sun_status == DEVICE_ENABLE) {
@@ -387,10 +376,12 @@ adcs_error_status update_attitude_determination() {
     if ((adcs_sensors.mgn.rm_status == DEVICE_NORMAL
       && adcs_sensors.imu.xm_status == DEVICE_NORMAL)
       || adcs_sensors.mgn.rm_status == DEVICE_NORMAL) {
-        WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f, adcs_sensors.mgn.rm_f, &WahbaRot);
+        WahbaRotM(adcs_sensors.sun.sun_xyz, gyroscope,
+                adcs_sensors.mgn.rm_f, &WahbaRot);
         WahbaRot.run_flag = true;
     } else if (adcs_sensors.imu.xm_status == DEVICE_NORMAL) {
-        WahbaRotM(adcs_sensors.sun.sun_xyz, adcs_sensors.imu.gyr_f, adcs_sensors.imu.xm_f, &WahbaRot);
+        WahbaRotM(adcs_sensors.sun.sun_xyz, gyroscope,
+                adcs_sensors.imu.xm_f, &WahbaRot);
         WahbaRot.run_flag = true;
     }
     return error_propagation(error_status_value);
@@ -405,6 +396,8 @@ adcs_error_status attitude_control() {
 
     float angular_velocities[3] = { 0 };
     /* Reset control signals */
+    adcs_actuator.magneto_torquer.current_z = 0;
+    adcs_actuator.magneto_torquer.current_y = 0;
     control.Iz = 0;
     control.Iy = 0;
     control.sp_rpm = 0;
@@ -413,10 +406,14 @@ adcs_error_status attitude_control() {
         angular_velocities[0] = adcs_sensors.imu.gyr_f[0];
         angular_velocities[1] = adcs_sensors.imu.gyr_f[1];
         angular_velocities[2] = adcs_sensors.imu.gyr_f[2];
+
+        control.sp_rpm = 0;
     } else {
         angular_velocities[0] = WahbaRot.W[0];
         angular_velocities[1] = WahbaRot.W[1];
         angular_velocities[2] = WahbaRot.W[2];
+
+        spin_torquer_controller(angular_velocities[1], &control);
     }
     /* Run B-dot and spin torquer controller if the angular velocities are bigger than thresholds */
     if (fabsf(angular_velocities[0]) > WX_THRES
@@ -458,7 +455,6 @@ adcs_error_status attitude_control() {
         }
     }
 
-    spin_torquer_controller(angular_velocities[1], &control);
     /* Set spin torquer RPM */
     adcs_actuator.spin_torquer.RPM = control.const_rmp + control.sp_rpm;
 
