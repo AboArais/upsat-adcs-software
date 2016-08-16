@@ -161,21 +161,6 @@ int main(void) {
     HAL_IWDG_Refresh(&hiwdg);
     /* USER CODE END 2 */
 
-    /**************************************/
-//    adcs_time.utc.year = 16;
-//    adcs_time.utc.month = 8;
-//    adcs_time.utc.day = 8;
-//    adcs_time.utc.weekday = RTC_WEEKDAY_MONDAY;
-//    adcs_time.utc.hour = 20;
-//    adcs_time.utc.min = 30;
-//    adcs_time.utc.sec = 0;
-//    set_time_UTC(adcs_time.utc);
-//
-//    int16_t XM[3000];
-//    int32_t RM[3000];
-//    uint16_t j = 0;
-    /**************************************/
-
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
@@ -190,22 +175,6 @@ int main(void) {
             magneto_torquer_off();
             /* Update measured vectors */
             error_status = update_measured_vectors();
-            /**************************************/
-//                    if (j<3000) {
-//                        RM[j] = adcs_sensors.mgn.rm_raw[0];
-//                        XM[j] = adcs_sensors.imu.xm_raw[0];
-//                        j++;
-//                        RM[j] = adcs_sensors.mgn.rm_raw[1];
-//                        XM[j] = adcs_sensors.imu.xm_raw[1];
-//                        j++;
-//                        RM[j] = adcs_sensors.mgn.rm_raw[2];
-//                        XM[j] = adcs_sensors.imu.xm_raw[2];
-//                        j++;
-//
-//                    } else {
-//                        break;
-//                    }
-            /**************************************/
             /* Open Magneto-torquer with previous current values */
             magneto_torquer_on();
             /* Get time for RTC*/
