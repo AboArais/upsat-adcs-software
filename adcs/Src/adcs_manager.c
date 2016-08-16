@@ -336,12 +336,12 @@ adcs_error_status update_attitude_determination() {
     adcs_error_status error_status_value = ERROR_OK;
 
     /* Set IGRF reference vectors */
-//    WahbaRot.w_m[0] = igrf_vector.Xm / igrf_vector.norm;
-//    WahbaRot.w_m[1] = igrf_vector.Ym / igrf_vector.norm;
-//    WahbaRot.w_m[2] = igrf_vector.Zm / igrf_vector.norm;
-    WahbaRot.w_m[0] = 0.5235;
-    WahbaRot.w_m[1] = -0.0358;
-    WahbaRot.w_m[2] = 0.8512;
+    WahbaRot.w_m[0] = igrf_vector.Xm / igrf_vector.norm;
+    WahbaRot.w_m[1] = igrf_vector.Ym / igrf_vector.norm;
+    WahbaRot.w_m[2] = igrf_vector.Zm / igrf_vector.norm;
+//    WahbaRot.w_m[0] = 0.5235;
+//    WahbaRot.w_m[1] = -0.0358;
+//    WahbaRot.w_m[2] = 0.8512;
 //    adcs_sensors.mgn.rm_f[0] = 0.0885;
 //    adcs_sensors.mgn.rm_f[1] = 0.9917;
 //    adcs_sensors.mgn.rm_f[2] = -0.0929;
@@ -397,14 +397,18 @@ adcs_error_status update_attitude_determination() {
 }
 
 /**
- * Run control for detumbling and pointing. Changes between controllers are done
+ * Run control for de-tumbling and pointing. Changes between controllers are done
  * according to angular velocities and availability of sun sensor.
  * @return Error status usual is ERROR_OK
  */
 adcs_error_status attitude_control() {
 
     float angular_velocities[3] = { 0 };
-
+    /* Reset control signals */
+    control.Iz = 0;
+    control.Iy = 0;
+    control.sp_rpm = 0;
+    /* Choose the correct velocities */
     if (WahbaRot.run_flag == false) {
         angular_velocities[0] = adcs_sensors.imu.gyr_f[0];
         angular_velocities[1] = adcs_sensors.imu.gyr_f[1];
@@ -415,34 +419,46 @@ adcs_error_status attitude_control() {
         angular_velocities[2] = WahbaRot.W[2];
     }
     /* Run B-dot and spin torquer controller if the angular velocities are bigger than thresholds */
-    if (angular_velocities[0] > WX_THRES
-     || angular_velocities[1] > WY_THRES
-     || angular_velocities[2] > WZ_THRES) {
+    if (fabsf(angular_velocities[0]) > WX_THRES
+     || fabsf(angular_velocities[1]) > WY_THRES
+     || fabsf(angular_velocities[2]) > WZ_THRES) {
         /* Check the magneto-meter sensor */
         if ((adcs_sensors.mgn.rm_status == DEVICE_NORMAL
           && adcs_sensors.imu.xm_status == DEVICE_NORMAL)
           || adcs_sensors.mgn.rm_status == DEVICE_NORMAL) {
-            b_dot(adcs_sensors.mgn.rm_f, adcs_sensors.mgn.rm_prev, adcs_sensors.mgn.rm_norm, &control);
+            b_dot(adcs_sensors.mgn.rm_f, adcs_sensors.mgn.rm_prev,
+                    adcs_sensors.mgn.rm_norm, &control);
+            /* Set the currents to magneto-torquers in mA*/
+            adcs_actuator.magneto_torquer.current_z = (int8_t) (control.Iz * 1000);
+            adcs_actuator.magneto_torquer.current_y = (int8_t) (control.Iy * 1000);
         } else if (adcs_sensors.imu.xm_status == DEVICE_NORMAL) {
-            b_dot(adcs_sensors.imu.xm_f, adcs_sensors.imu.xm_prev, adcs_sensors.imu.xm_norm, &control);
-        } else {
-            control.Iz = 0;
-            control.Iy = 0;
+            b_dot(adcs_sensors.imu.xm_f, adcs_sensors.imu.xm_prev,
+                    adcs_sensors.imu.xm_norm, &control);
+            /* Set the currents to magneto-torquers in mA*/
+            adcs_actuator.magneto_torquer.current_z = (int8_t) (control.Iz * 1000);
+            adcs_actuator.magneto_torquer.current_y = (int8_t) (control.Iy * 1000);
         }
-        spin_torquer_controller(angular_velocities[1], &control);
     /* If angular velocities are smaller than the thresholds then run pointing controller */
     } else {
         /* Run pointing controller if the sun sensor is available */
         if (adcs_sensors.sun.sun_status == DEVICE_ENABLE
-         && WahbaRot.run_flag == true) {
+         && WahbaRot.run_flag == true
+         && adcs_sensors.mgn.rm_status == DEVICE_NORMAL) {
             /* Run pointing controller when the sun sensor is available */
-            ;
+            pointing_controller(adcs_sensors.mgn.rm_f, adcs_sensors.imu.xm_norm,
+                    &WahbaRot, &control);
+            /* Set the currents to magneto-torquers in mA*/
+            adcs_actuator.magneto_torquer.current_z = (int8_t) (control.Iz * 1000);
+            adcs_actuator.magneto_torquer.current_y = (int8_t) (control.Iy * 1000);
+            b_dot(adcs_sensors.mgn.rm_f, adcs_sensors.mgn.rm_prev,
+                    adcs_sensors.mgn.rm_norm, &control);
+            /* Set the currents to magneto-torquers in mA*/
+            adcs_actuator.magneto_torquer.current_z += (int8_t) (control.Iz * 1000);
+            adcs_actuator.magneto_torquer.current_y += (int8_t) (control.Iy * 1000);
         }
     }
 
-    /* Set the currents to magneto-torquers in mA*/
-    adcs_actuator.magneto_torquer.current_z = (int8_t) (control.Iz * 1000);
-    adcs_actuator.magneto_torquer.current_y = (int8_t) (control.Iy * 1000);
+    spin_torquer_controller(angular_velocities[1], &control);
     /* Set spin torquer RPM */
     adcs_actuator.spin_torquer.RPM = control.const_rmp + control.sp_rpm;
 

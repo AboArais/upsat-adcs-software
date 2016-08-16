@@ -25,23 +25,23 @@
 #define LOOP_TIME           1       // in sec
 #define LOOP_TIME_TICKS     50000   // in ticks
 
-#define GPS_ALARM_ON_INIT   30  // in min
+#define GPS_ALARM_ON_INIT   30 // in min
 #define GPS_ALARM_ON        5  // in hours
 #define GPS_ALARM_UNLOCK    12 // in min
 #define GPS_ALARM_RESET     8  // in min
 
 #define WDG_REFRESH         50 // Times for reset (WDG), in sec ~61sec
 
-#define MAX_IGRF_NORM   60000 // in nT, to check if the magneto-meter values are valid
+#define MAX_IGRF_NORM   80000 // in nT, to check if the magneto-meter values are valid
 #define MIN_IGRF_NORM   10000 // in nT, to check if the magneto-meter values are valid
 
-#define WX_THRES        RAD(0.02) // Threshold to enable B-dot controller (in deg)
-#define WY_THRES        RAD(0.02) // Threshold to enable B-dot controller (in deg)
-#define WZ_THRES        RAD(0.02) // Threshold to enable B-dot controller (in deg)
+#define WX_THRES        RAD(0.2) // Threshold to enable B-dot controller (in deg/s)
+#define WY_THRES        RAD(0.2) // Threshold to enable B-dot controller (in deg/s)
+#define WZ_THRES        RAD(0.2) // Threshold to enable B-dot controller (in deg/s)
 
-#define BDOT_GAIN            10     // Gain of B-dot controller, *0.1Nms
-#define POINTING_GAIN_1      0      // Point gain kp1
-#define POINTING_GAIN_2      0      // Point gain kp2
+#define BDOT_GAIN            1      // Gain of B-dot controller, *0.1Nms
+#define POINTING_GAIN_W      1      // Point gain kp1
+#define POINTING_GAIN_Q      20     // Point gain kp2
 #define SPIN_TORQUER_GAIN    1      // Spin torquer gain, *0.001Nms
 #define SPIN_TORQUER_REF_RPM 5000   // Reference RMP in rmp
 
